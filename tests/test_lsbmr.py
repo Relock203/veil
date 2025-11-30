@@ -1,0 +1,61 @@
+import pytest
+from PIL import Image
+from veil.lsbmr import embed, extract
+from core.utils import calculate_capacity
+from core.exceptions import CapacityError
+
+
+def test_lsbmr_roundtrip_simple():
+    image = Image.new("RGB", (60, 60), color="white")
+    message = b"hello lsbmr"
+
+    stego = embed(
+        image=image,
+        message=message,
+        bits_per_channel=1,
+        channels="RGB",
+    )
+
+    extracted = extract(
+        image=stego,
+        bits_per_channel=1,
+        channels="RGB",
+    )
+
+    assert extracted == message
+
+
+@pytest.mark.parametrize("channels", ["R", "G", "B", "RG", "RGB"])
+def test_lsbmr_roundtrip_different_channels(channels):
+    image = Image.new("RGB", (60, 60), color="white")
+    message = "Привет, Veil Matching!".encode("utf-8")
+
+    stego = embed(
+        image=image,
+        message=message,
+        bits_per_channel=1,
+        channels="RGB",
+    )
+
+    extracted = extract(
+        image=stego,
+        bits_per_channel=1,
+        channels="RGB",
+    )
+
+    assert extracted == message
+
+
+def test_lsbmr_raises_capacity_error_on_too_large_message():
+    image = Image.new("RGB", (10, 10), color="white")
+    capacity = calculate_capacity(image, bits_per_channel=1, channels="RGB")
+
+    too_large_message = b"a" * (capacity + 1)
+
+    with pytest.raises(CapacityError):
+        embed(
+            image=image,
+            message=too_large_message,
+            bits_per_channel=1,
+            channels="RGB",
+        )
