@@ -1,7 +1,8 @@
 import pytest
 from PIL import Image
 
-from veil.analysis import lsb_statistics, lsb_plane_image
+from veil.analysis.lsb_statistics import lsb_statistics
+from veil.analysis.lsb_plane_image import lsb_plane_image
 
 
 def make_solid_image(size=(16, 16), color=(0, 0, 0)):

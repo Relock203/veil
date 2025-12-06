@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="ru" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>veil.alpha &mdash; документация Veil 1.0.0</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=5f6e15f3" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=e35015f7"></script>
+        <script src="../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../_static/translations.js?v=29b1f277"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Алфавитный указатель" href="../../genindex.html" />
+    <link rel="search" title="Поиск" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Veil
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Поиск в документации" aria-label="Поиск в документации" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Меню навигации">
+              <p class="caption" role="heading"><span class="caption-text">Основные разделы</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Введение</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Использование Veil</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../stego_methods.html">Методы стеганографии</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../stego_api.html">API стеганографических методов</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Меню навигации для мобильных устройств" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Veil</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Навигация по страницам">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Код модуля</a></li>
+      <li class="breadcrumb-item active">veil.alpha</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Исходный код veil.alpha</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Стеганография в альфа-канале изображения.</span>
+
+<span class="sd">Метод использует прозрачность (A-канал) для встраивания данных в формате LSB.</span>
+<span class="sd">Так как альфа-канал обычно слабо влияет на визуальное восприятие изображения,</span>
+<span class="sd">встраивание даже нескольких младших бит в каждый пиксель остаётся малозаметным.</span>
+
+<span class="sd">Поддерживается от 1 до 8 младших бит на канал, что даёт высокую вместимость</span>
+<span class="sd">и делает метод удобным для учебных демонстраций и переноса больших сообщений.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">core.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">bytes_to_bits</span><span class="p">,</span> <span class="n">bits_to_bytes</span><span class="p">,</span> <span class="n">calculate_alpha_capacity</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">core.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">CapacityError</span><span class="p">,</span> <span class="n">ExtractionError</span>
+
+
+<div class="viewcode-block" id="embed_message">
+<a class="viewcode-back" href="../../stego_api.html#veil.alpha.embed_message">[документация]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">embed_message</span><span class="p">(</span>
+        <span class="n">image</span><span class="p">:</span> <span class="n">Image</span><span class="o">.</span><span class="n">Image</span><span class="p">,</span>
+        <span class="n">message</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span>
+        <span class="n">bits_per_channel</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Image</span><span class="o">.</span><span class="n">Image</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Встраивает сообщение в альфа-канал изображения.</span>
+
+<span class="sd">    Метод использует технику LSB (Least Significant Bits) для скрытия данных</span>
+<span class="sd">    в прозрачности (A-канале). Количество используемых младших бит регулируется</span>
+<span class="sd">    параметром bits_per_channel (диапазон 1–8).</span>
+
+<span class="sd">    Формат полезной нагрузки::</span>
+<span class="sd">        [4 байта длины сообщения, big-endian] + [байты сообщения]</span>
+
+<span class="sd">    Алгоритм:</span>
+<span class="sd">        1. Исходное изображение переводится в режим RGBA.</span>
+<span class="sd">        2. Проверяется вместимость альфа-канала.</span>
+<span class="sd">        3. Сообщение переводится в поток бит.</span>
+<span class="sd">        4. В каждый пиксель записываются bits_per_channel младших бит.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        image: Исходное изображение (RGB или RGBA).</span>
+<span class="sd">        message: Скрываемые данные в виде байтов.</span>
+<span class="sd">        bits_per_channel: Количество младших бит для встраивания (1..8).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Новое изображение RGBA с внедрённым сообщением.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: Если bits_per_channel вне диапазона [1, 8].</span>
+<span class="sd">        CapacityError: Если сообщение не помещается при данных настройках.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="mi">1</span> <span class="o">&lt;=</span> <span class="n">bits_per_channel</span> <span class="o">&lt;=</span> <span class="mi">8</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;bits_per_channel must be between 1 and 8&quot;</span><span class="p">)</span>
+
+    <span class="n">capacity</span> <span class="o">=</span> <span class="n">calculate_alpha_capacity</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">bits_per_channel</span><span class="p">)</span>
+
+    <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+    <span class="n">length_bytes</span> <span class="o">=</span> <span class="n">length</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">byteorder</span><span class="o">=</span><span class="s2">&quot;big&quot;</span><span class="p">)</span>
+    <span class="n">payload</span> <span class="o">=</span> <span class="n">length_bytes</span> <span class="o">+</span> <span class="n">message</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">capacity</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">CapacityError</span><span class="p">(</span><span class="s2">&quot;Message is too large for alpha-channel capacity&quot;</span><span class="p">)</span>
+
+    <span class="n">payload_bits</span> <span class="o">=</span> <span class="n">bytes_to_bits</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+    <span class="n">total_bits</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">payload_bits</span><span class="p">)</span>
+
+    <span class="n">rgba</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">&quot;RGBA&quot;</span><span class="p">)</span>
+    <span class="n">pixels</span> <span class="o">=</span> <span class="n">rgba</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
+    <span class="n">width</span><span class="p">,</span> <span class="n">height</span> <span class="o">=</span> <span class="n">rgba</span><span class="o">.</span><span class="n">size</span>
+
+    <span class="n">bit_index</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="n">bits_per_channel</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>  <span class="c1"># маска младших бит</span>
+
+    <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">height</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">width</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">bit_index</span> <span class="o">&gt;=</span> <span class="n">total_bits</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">rgba</span>
+
+            <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">pixels</span><span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">]</span>
+
+            <span class="n">remaining</span> <span class="o">=</span> <span class="n">total_bits</span> <span class="o">-</span> <span class="n">bit_index</span>
+            <span class="k">if</span> <span class="n">remaining</span> <span class="o">&gt;=</span> <span class="n">bits_per_channel</span><span class="p">:</span>
+                <span class="n">chunk</span> <span class="o">=</span> <span class="n">payload_bits</span><span class="p">[</span><span class="n">bit_index</span><span class="p">:</span> <span class="n">bit_index</span> <span class="o">+</span> <span class="n">bits_per_channel</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Дополняем нулями, если данные закончились</span>
+                <span class="n">chunk</span> <span class="o">=</span> <span class="n">payload_bits</span><span class="p">[</span><span class="n">bit_index</span><span class="p">:</span><span class="n">total_bits</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span>
+                        <span class="n">bits_per_channel</span> <span class="o">-</span> <span class="n">remaining</span>
+                <span class="p">)</span>
+
+            <span class="c1"># Превращаем битовую последовательность в число</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">bv</span><span class="p">)</span> <span class="k">for</span> <span class="n">bv</span> <span class="ow">in</span> <span class="n">chunk</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span>
+
+            <span class="n">new_a</span> <span class="o">=</span> <span class="p">(</span><span class="n">a</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">mask</span><span class="p">)</span> <span class="o">|</span> <span class="n">value</span>
+
+            <span class="n">pixels</span><span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">new_a</span><span class="p">)</span>
+            <span class="n">bit_index</span> <span class="o">+=</span> <span class="n">bits_per_channel</span>
+
+    <span class="k">return</span> <span class="n">rgba</span></div>
+
+
+
+<div class="viewcode-block" id="extract_message">
+<a class="viewcode-back" href="../../stego_api.html#veil.alpha.extract_message">[документация]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">extract_message</span><span class="p">(</span>
+        <span class="n">image</span><span class="p">:</span> <span class="n">Image</span><span class="o">.</span><span class="n">Image</span><span class="p">,</span>
+        <span class="n">bits_per_channel</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Извлекает сообщение, скрытое в альфа-канале.</span>
+
+<span class="sd">    Извлечение выполняется в том же порядке и объёме бит, что и при встраивании.</span>
+<span class="sd">    Первые 32 бита интерпретируются как длина сообщения, затем читаются данные.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        image: Изображение (RGB или RGBA) с возможным стего-сообщением.</span>
+<span class="sd">        bits_per_channel: Количество бит, использованное при встраивании (1..8).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Извлечённое сообщение в виде bytes.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: Если bits_per_channel вне диапазона 1..8.</span>
+<span class="sd">        ExtractionError: Если данных недостаточно для корректного извлечения.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="mi">1</span> <span class="o">&lt;=</span> <span class="n">bits_per_channel</span> <span class="o">&lt;=</span> <span class="mi">8</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;bits_per_channel must be between 1 and 8&quot;</span><span class="p">)</span>
+
+    <span class="n">rgba</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">&quot;RGBA&quot;</span><span class="p">)</span>
+    <span class="n">pixels</span> <span class="o">=</span> <span class="n">rgba</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
+    <span class="n">width</span><span class="p">,</span> <span class="n">height</span> <span class="o">=</span> <span class="n">rgba</span><span class="o">.</span><span class="n">size</span>
+
+    <span class="n">bits</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="n">bits_per_channel</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+
+    <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">height</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">width</span><span class="p">):</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">pixels</span><span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">]</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">a</span> <span class="o">&amp;</span> <span class="n">mask</span>
+
+            <span class="c1"># Получаем строку бит фиксированной длины bits_per_channel</span>
+            <span class="n">bitstring</span> <span class="o">=</span> <span class="nb">format</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;0</span><span class="si">{</span><span class="n">bits_per_channel</span><span class="si">}</span><span class="s2">b&quot;</span><span class="p">)</span>
+            <span class="n">bits</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">bitstring</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bits</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">32</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ExtractionError</span><span class="p">(</span><span class="s2">&quot;Not enough data to read message length&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Длина сообщения — первые 32 бита</span>
+    <span class="n">length_bits</span> <span class="o">=</span> <span class="n">bits</span><span class="p">[:</span><span class="mi">32</span><span class="p">]</span>
+    <span class="n">length_bytes</span> <span class="o">=</span> <span class="n">bits_to_bytes</span><span class="p">(</span><span class="n">length_bits</span><span class="p">)</span>
+    <span class="n">length</span> <span class="o">=</span> <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">length_bytes</span><span class="p">,</span> <span class="n">byteorder</span><span class="o">=</span><span class="s2">&quot;big&quot;</span><span class="p">)</span>
+
+    <span class="n">needed_bits</span> <span class="o">=</span> <span class="n">length</span> <span class="o">*</span> <span class="mi">8</span>
+    <span class="n">total_needed</span> <span class="o">=</span> <span class="mi">32</span> <span class="o">+</span> <span class="n">needed_bits</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bits</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">total_needed</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ExtractionError</span><span class="p">(</span><span class="s2">&quot;Not enough data to read full message&quot;</span><span class="p">)</span>
+
+    <span class="n">message_bits</span> <span class="o">=</span> <span class="n">bits</span><span class="p">[</span><span class="mi">32</span><span class="p">:</span><span class="n">total_needed</span><span class="p">]</span>
+    <span class="n">message_bytes</span> <span class="o">=</span> <span class="n">bits_to_bytes</span><span class="p">(</span><span class="n">message_bits</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">message_bytes</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Авторские права 2025. </p>
+  </div>
+
+  Собрано при помощи <a href="https://www.sphinx-doc.org/">Sphinx</a> с использованием
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">темы,</a>
+    предоставленной <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

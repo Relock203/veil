@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="ru" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>veil.dct &mdash; документация Veil 1.0.0</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=5f6e15f3" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=e35015f7"></script>
+        <script src="../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../_static/translations.js?v=29b1f277"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Алфавитный указатель" href="../../genindex.html" />
+    <link rel="search" title="Поиск" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Veil
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Поиск в документации" aria-label="Поиск в документации" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Меню навигации">
+              <p class="caption" role="heading"><span class="caption-text">Основные разделы</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Введение</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Использование Veil</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../stego_methods.html">Методы стеганографии</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../stego_api.html">API стеганографических методов</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Меню навигации для мобильных устройств" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Veil</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Навигация по страницам">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Код модуля</a></li>
+      <li class="breadcrumb-item active">veil.dct</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Исходный код veil.dct</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Экспериментальный метод частотной стеганографии на основе DCT (дискретного</span>
+<span class="sd">косинусного преобразования), по аналогии с JPEG.</span>
+
+<span class="sd">Основная идея:</span>
+<span class="sd">    1. Изображение преобразуется в пространство YCbCr.</span>
+<span class="sd">    2. Стеганография выполняется в яркостном канале (Y), т.к. он наиболее</span>
+<span class="sd">       устойчив к искажениям и важен для зрительного восприятия.</span>
+<span class="sd">    3. Изображение разбивается на блоки 8×8.</span>
+<span class="sd">    4. Для каждого блока вычисляется DCT.</span>
+<span class="sd">    5. Несколько AC-коэффициентов заменяются на их значения с изменённым LSB.</span>
+<span class="sd">    6. Выполняется обратное DCT → сборка изображения → преобразование в RGB.</span>
+
+<span class="sd">Метод нестабилен из-за ошибок округления и применения float в DCT/IDCT.</span>
+<span class="sd">Используется только как экспериментальная демонстрация частотной стеганографии.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">math</span><span class="w"> </span><span class="kn">import</span> <span class="n">cos</span><span class="p">,</span> <span class="n">pi</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">core.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">bytes_to_bits</span><span class="p">,</span> <span class="n">bits_to_bytes</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">core.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">CapacityError</span><span class="p">,</span> <span class="n">ExtractionError</span>
+
+<span class="n">BLOCK_SIZE</span> <span class="o">=</span> <span class="mi">8</span>
+
+<span class="c1"># Частоты, в которые мы встраиваем 1 бит</span>
+<span class="n">CANDIDATE_POSITIONS</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+    <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+    <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+<span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_image_to_luma_blocks</span><span class="p">(</span><span class="n">image</span><span class="p">:</span> <span class="n">Image</span><span class="o">.</span><span class="n">Image</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]]],</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Преобразует изображение в яркостный канал (L) и разбивает на блоки 8×8.</span>
+
+<span class="sd">    Для корректности DCT все размеры должны быть кратны 8, поэтому изображение</span>
+<span class="sd">    дополняется паддингом справа и снизу до ближайшего размера, делящегося на 8.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        image: Исходное изображение Pillow.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        blocks: Список блоков 8×8, каждый блок — матрица float.</span>
+<span class="sd">        width: Исходная ширина изображения.</span>
+<span class="sd">        height: Исходная высота изображения.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">luma</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">&quot;L&quot;</span><span class="p">)</span>
+    <span class="n">width</span><span class="p">,</span> <span class="n">height</span> <span class="o">=</span> <span class="n">luma</span><span class="o">.</span><span class="n">size</span>
+
+    <span class="n">padded_width</span> <span class="o">=</span> <span class="p">(</span><span class="n">width</span> <span class="o">+</span> <span class="mi">7</span><span class="p">)</span> <span class="o">//</span> <span class="mi">8</span> <span class="o">*</span> <span class="mi">8</span>
+    <span class="n">padded_height</span> <span class="o">=</span> <span class="p">(</span><span class="n">height</span> <span class="o">+</span> <span class="mi">7</span><span class="p">)</span> <span class="o">//</span> <span class="mi">8</span> <span class="o">*</span> <span class="mi">8</span>
+
+    <span class="n">padded</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s2">&quot;L&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">padded_width</span><span class="p">,</span> <span class="n">padded_height</span><span class="p">))</span>
+    <span class="n">padded</span><span class="o">.</span><span class="n">paste</span><span class="p">(</span><span class="n">luma</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+
+    <span class="n">pixels</span> <span class="o">=</span> <span class="n">padded</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
+    <span class="n">blocks</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">padded_height</span><span class="p">,</span> <span class="mi">8</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">padded_width</span><span class="p">,</span> <span class="mi">8</span><span class="p">):</span>
+            <span class="n">block</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">pixels</span><span class="p">[</span><span class="n">x</span> <span class="o">+</span> <span class="n">dx</span><span class="p">,</span> <span class="n">y</span> <span class="o">+</span> <span class="n">dy</span><span class="p">])</span> <span class="k">for</span> <span class="n">dx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">8</span><span class="p">)]</span>
+                <span class="k">for</span> <span class="n">dy</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+            <span class="p">]</span>
+            <span class="n">blocks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">block</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">blocks</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_luma_blocks_to_image</span><span class="p">(</span><span class="n">blocks</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]]],</span> <span class="n">width</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">height</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Image</span><span class="o">.</span><span class="n">Image</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Собирает изображение из блоков яркости (после IDCT).</span>
+
+<span class="sd">    Блоки записываются в изображение с учётом паддинга; затем изображение</span>
+<span class="sd">    обрезается до исходного размера.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        blocks: Список блоков 8×8.</span>
+<span class="sd">        width: Исходная ширина изображения.</span>
+<span class="sd">        height: Исходная высота изображения.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Восстановленное изображение в режиме L.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">padded_width</span> <span class="o">=</span> <span class="p">(</span><span class="n">width</span> <span class="o">+</span> <span class="mi">7</span><span class="p">)</span> <span class="o">//</span> <span class="mi">8</span> <span class="o">*</span> <span class="mi">8</span>
+    <span class="n">padded_height</span> <span class="o">=</span> <span class="p">(</span><span class="n">height</span> <span class="o">+</span> <span class="mi">7</span><span class="p">)</span> <span class="o">//</span> <span class="mi">8</span> <span class="o">*</span> <span class="mi">8</span>
+
+    <span class="n">img</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s2">&quot;L&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">padded_width</span><span class="p">,</span> <span class="n">padded_height</span><span class="p">))</span>
+    <span class="n">pixels</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
+
+    <span class="n">idx</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">padded_height</span><span class="p">,</span> <span class="mi">8</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">padded_width</span><span class="p">,</span> <span class="mi">8</span><span class="p">):</span>
+            <span class="n">block</span> <span class="o">=</span> <span class="n">blocks</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+            <span class="n">idx</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="k">for</span> <span class="n">dy</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">8</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">dx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">8</span><span class="p">):</span>
+                    <span class="n">val</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">block</span><span class="p">[</span><span class="n">dy</span><span class="p">][</span><span class="n">dx</span><span class="p">])</span>
+                    <span class="n">val</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="mi">255</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">val</span><span class="p">)))</span>
+                    <span class="n">pixels</span><span class="p">[</span><span class="n">x</span> <span class="o">+</span> <span class="n">dx</span><span class="p">,</span> <span class="n">y</span> <span class="o">+</span> <span class="n">dy</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>
+
+    <span class="n">img</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">crop</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">img</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_dct_2d</span><span class="p">(</span><span class="n">block</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Вычисляет двумерное дискретное косинусное преобразование (DCT-II).</span>
+
+<span class="sd">    Полная реализация формулы DCT-II без квантования.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        block: Матрица 8×8 яркостей.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Матрица коэффициентов DCT 8×8.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">BLOCK_SIZE</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[[</span><span class="mf">0.0</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">)]</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">)]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">alpha</span><span class="p">(</span><span class="n">k</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">**</span> <span class="mf">0.5</span><span class="p">)</span> <span class="k">if</span> <span class="n">k</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="mf">1.0</span>
+
+    <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+            <span class="n">sum_val</span> <span class="o">=</span> <span class="mf">0.0</span>
+            <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+                    <span class="n">sum_val</span> <span class="o">+=</span> <span class="p">(</span>
+                            <span class="n">block</span><span class="p">[</span><span class="n">y</span><span class="p">][</span><span class="n">x</span><span class="p">]</span>
+                            <span class="o">*</span> <span class="n">cos</span><span class="p">((</span><span class="mi">2</span> <span class="o">*</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">u</span> <span class="o">*</span> <span class="n">pi</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">n</span><span class="p">))</span>
+                            <span class="o">*</span> <span class="n">cos</span><span class="p">((</span><span class="mi">2</span> <span class="o">*</span> <span class="n">y</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span> <span class="o">*</span> <span class="n">pi</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">n</span><span class="p">))</span>
+                    <span class="p">)</span>
+
+            <span class="n">result</span><span class="p">[</span><span class="n">v</span><span class="p">][</span><span class="n">u</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.25</span> <span class="o">*</span> <span class="n">alpha</span><span class="p">(</span><span class="n">u</span><span class="p">)</span> <span class="o">*</span> <span class="n">alpha</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">*</span> <span class="n">sum_val</span>
+
+    <span class="k">return</span> <span class="n">result</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_idct_2d</span><span class="p">(</span><span class="n">coeffs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Выполняет обратное двумерное DCT (IDCT).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        coeffs: Матрица коэффициентов DCT 8×8.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Восстановленный блок яркости 8×8.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">BLOCK_SIZE</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[[</span><span class="mf">0.0</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">)]</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">)]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">alpha</span><span class="p">(</span><span class="n">k</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">**</span> <span class="mf">0.5</span><span class="p">)</span> <span class="k">if</span> <span class="n">k</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="mf">1.0</span>
+
+    <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+            <span class="n">sum_val</span> <span class="o">=</span> <span class="mf">0.0</span>
+            <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+                    <span class="n">sum_val</span> <span class="o">+=</span> <span class="p">(</span>
+                            <span class="n">alpha</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
+                            <span class="o">*</span> <span class="n">alpha</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+                            <span class="o">*</span> <span class="n">coeffs</span><span class="p">[</span><span class="n">v</span><span class="p">][</span><span class="n">u</span><span class="p">]</span>
+                            <span class="o">*</span> <span class="n">cos</span><span class="p">((</span><span class="mi">2</span> <span class="o">*</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">u</span> <span class="o">*</span> <span class="n">pi</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">n</span><span class="p">))</span>
+                            <span class="o">*</span> <span class="n">cos</span><span class="p">((</span><span class="mi">2</span> <span class="o">*</span> <span class="n">y</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span> <span class="o">*</span> <span class="n">pi</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">n</span><span class="p">))</span>
+                    <span class="p">)</span>
+
+            <span class="n">result</span><span class="p">[</span><span class="n">y</span><span class="p">][</span><span class="n">x</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.25</span> <span class="o">*</span> <span class="n">sum_val</span>
+    <span class="k">return</span> <span class="n">result</span>
+
+
+<div class="viewcode-block" id="calculate_dct_capacity">
+<a class="viewcode-back" href="../../stego_api.html#veil.dct.calculate_dct_capacity">[документация]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">calculate_dct_capacity</span><span class="p">(</span><span class="n">image</span><span class="p">:</span> <span class="n">Image</span><span class="o">.</span><span class="n">Image</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Вычисляет вместимость частотного контейнера в байтах.</span>
+
+<span class="sd">    Каждому блоку 8×8 соответствует len(CANDIDATE_POSITIONS) бит полезных данных.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">blocks</span> <span class="o">=</span> <span class="n">_image_to_luma_blocks</span><span class="p">(</span><span class="n">image</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">num_blocks</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">blocks</span><span class="p">)</span>
+    <span class="n">total_bits</span> <span class="o">=</span> <span class="n">num_blocks</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">CANDIDATE_POSITIONS</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">total_bits</span> <span class="o">//</span> <span class="mi">8</span></div>
+
+
+
+<div class="viewcode-block" id="embed_message">
+<a class="viewcode-back" href="../../stego_api.html#veil.dct.embed_message">[документация]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">embed_message</span><span class="p">(</span><span class="n">image</span><span class="p">:</span> <span class="n">Image</span><span class="o">.</span><span class="n">Image</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Image</span><span class="o">.</span><span class="n">Image</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Встраивает сообщение методом DCT-LSB в яркостный канал изображения.</span>
+
+<span class="sd">    Метод:</span>
+<span class="sd">        * изображение переводится в YCbCr;</span>
+<span class="sd">        * яркостный канал (Y) разбивается на блоки 8×8;</span>
+<span class="sd">        * в несколько AC-коэффициентов каждого блока встраивается по 1 биту;</span>
+<span class="sd">        * выполняется обратное DCT и сборка изображения.</span>
+
+<span class="sd">    Встраивается &quot;тройной заголовок&quot; (length * 3), чтобы повысить шанс</span>
+<span class="sd">    корректного восстановления длины при погрешностях float.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        image: Изображение RGB.</span>
+<span class="sd">        message: Байты сообщения.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Изображение RGB со встроенными данными.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        CapacityError: Если данные не помещаются в изображение.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ycbcr</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">&quot;YCbCr&quot;</span><span class="p">)</span>
+    <span class="n">Y</span><span class="p">,</span> <span class="n">Cb</span><span class="p">,</span> <span class="n">Cr</span> <span class="o">=</span> <span class="n">ycbcr</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+
+    <span class="n">capacity</span> <span class="o">=</span> <span class="n">calculate_dct_capacity</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+
+    <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+    <span class="n">header</span> <span class="o">=</span> <span class="n">length</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">byteorder</span><span class="o">=</span><span class="s2">&quot;big&quot;</span><span class="p">)</span>
+    <span class="n">header3</span> <span class="o">=</span> <span class="n">header</span> <span class="o">*</span> <span class="mi">3</span>  <span class="c1"># 12 байт, 96 бит</span>
+
+    <span class="n">payload</span> <span class="o">=</span> <span class="n">header3</span> <span class="o">+</span> <span class="n">message</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">capacity</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">CapacityError</span><span class="p">(</span><span class="s2">&quot;Message is too large for DCT capacity of this image&quot;</span><span class="p">)</span>
+
+    <span class="n">payload_bits</span> <span class="o">=</span> <span class="n">bytes_to_bits</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+
+    <span class="n">blocks</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span> <span class="o">=</span> <span class="n">_image_to_luma_blocks</span><span class="p">(</span><span class="n">Y</span><span class="p">)</span>
+
+    <span class="n">bit_index</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">total_bits</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">payload_bits</span><span class="p">)</span>
+
+    <span class="n">new_blocks</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="n">blocks</span><span class="p">:</span>
+        <span class="n">coeffs</span> <span class="o">=</span> <span class="n">_dct_2d</span><span class="p">(</span><span class="n">block</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">bit_index</span> <span class="o">&lt;</span> <span class="n">total_bits</span><span class="p">:</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">u</span><span class="p">)</span> <span class="ow">in</span> <span class="n">CANDIDATE_POSITIONS</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">bit_index</span> <span class="o">&gt;=</span> <span class="n">total_bits</span><span class="p">:</span>
+                    <span class="k">break</span>
+
+                <span class="n">bit</span> <span class="o">=</span> <span class="n">payload_bits</span><span class="p">[</span><span class="n">bit_index</span><span class="p">]</span>
+
+                <span class="n">val</span> <span class="o">=</span> <span class="n">coeffs</span><span class="p">[</span><span class="n">v</span><span class="p">][</span><span class="n">u</span><span class="p">]</span>
+                <span class="n">ival</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">val</span><span class="p">))</span>
+                <span class="n">ival</span> <span class="o">=</span> <span class="p">(</span><span class="n">ival</span> <span class="o">&amp;</span> <span class="o">~</span><span class="mi">1</span><span class="p">)</span> <span class="o">|</span> <span class="n">bit</span>
+                <span class="n">coeffs</span><span class="p">[</span><span class="n">v</span><span class="p">][</span><span class="n">u</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">ival</span><span class="p">)</span>
+
+                <span class="n">bit_index</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">new_blocks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coeffs</span><span class="p">)</span>
+
+    <span class="n">spatial_blocks</span> <span class="o">=</span> <span class="p">[</span><span class="n">_idct_2d</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">new_blocks</span><span class="p">]</span>
+    <span class="n">stego_Y</span> <span class="o">=</span> <span class="n">_luma_blocks_to_image</span><span class="p">(</span><span class="n">spatial_blocks</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">)</span>
+
+    <span class="n">stego_ycbcr</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="s2">&quot;YCbCr&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">stego_Y</span><span class="p">,</span> <span class="n">Cb</span><span class="p">,</span> <span class="n">Cr</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">stego_ycbcr</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">&quot;RGB&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="extract_message">
+<a class="viewcode-back" href="../../stego_api.html#veil.dct.extract_message">[документация]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">extract_message</span><span class="p">(</span><span class="n">image</span><span class="p">:</span> <span class="n">Image</span><span class="o">.</span><span class="n">Image</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Извлекает сообщение, встроенное методом DCT-LSB.</span>
+
+<span class="sd">    Возврат длины:</span>
+<span class="sd">        Встраивается три заголовка подряд, поэтому при извлечении</span>
+<span class="sd">        вычисляются три разных значения длины (h1, h2, h3).</span>
+<span class="sd">        Если хотя бы два совпадают — принимаем это значение.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        image: Стего-изображение RGB.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Извлечённое сообщение.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ExtractionError: Если не удаётся корректно извлечь длину</span>
+<span class="sd">            или полезные данные.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ycbcr</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">&quot;YCbCr&quot;</span><span class="p">)</span>
+    <span class="n">Y</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">ycbcr</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+
+    <span class="n">blocks</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span> <span class="o">=</span> <span class="n">_image_to_luma_blocks</span><span class="p">(</span><span class="n">Y</span><span class="p">)</span>
+
+    <span class="n">bits</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="n">blocks</span><span class="p">:</span>
+        <span class="n">coeffs</span> <span class="o">=</span> <span class="n">_dct_2d</span><span class="p">(</span><span class="n">block</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">u</span><span class="p">)</span> <span class="ow">in</span> <span class="n">CANDIDATE_POSITIONS</span><span class="p">:</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="n">coeffs</span><span class="p">[</span><span class="n">v</span><span class="p">][</span><span class="n">u</span><span class="p">]</span>
+            <span class="n">ival</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">val</span><span class="p">))</span>
+            <span class="n">bits</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ival</span> <span class="o">&amp;</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bits</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">96</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ExtractionError</span><span class="p">(</span><span class="s2">&quot;Not enough data to read header&quot;</span><span class="p">)</span>
+
+    <span class="n">header_bits</span> <span class="o">=</span> <span class="n">bits</span><span class="p">[:</span><span class="mi">96</span><span class="p">]</span>
+    <span class="n">h1_bits</span> <span class="o">=</span> <span class="n">header_bits</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">32</span><span class="p">]</span>
+    <span class="n">h2_bits</span> <span class="o">=</span> <span class="n">header_bits</span><span class="p">[</span><span class="mi">32</span><span class="p">:</span><span class="mi">64</span><span class="p">]</span>
+    <span class="n">h3_bits</span> <span class="o">=</span> <span class="n">header_bits</span><span class="p">[</span><span class="mi">64</span><span class="p">:</span><span class="mi">96</span><span class="p">]</span>
+
+    <span class="n">h1</span> <span class="o">=</span> <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">bits_to_bytes</span><span class="p">(</span><span class="n">h1_bits</span><span class="p">),</span> <span class="s2">&quot;big&quot;</span><span class="p">)</span>
+    <span class="n">h2</span> <span class="o">=</span> <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">bits_to_bytes</span><span class="p">(</span><span class="n">h2_bits</span><span class="p">),</span> <span class="s2">&quot;big&quot;</span><span class="p">)</span>
+    <span class="n">h3</span> <span class="o">=</span> <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">bits_to_bytes</span><span class="p">(</span><span class="n">h3_bits</span><span class="p">),</span> <span class="s2">&quot;big&quot;</span><span class="p">)</span>
+
+    <span class="n">candidates</span> <span class="o">=</span> <span class="p">[</span><span class="n">h1</span><span class="p">,</span> <span class="n">h2</span><span class="p">,</span> <span class="n">h3</span><span class="p">]</span>
+    <span class="n">length</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">candidates</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">candidates</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">val</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">length</span> <span class="o">=</span> <span class="n">val</span>
+            <span class="k">break</span>
+
+    <span class="k">if</span> <span class="n">length</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ExtractionError</span><span class="p">(</span><span class="s2">&quot;Cannot reliably decode message length&quot;</span><span class="p">)</span>
+
+    <span class="n">needed_bits</span> <span class="o">=</span> <span class="n">length</span> <span class="o">*</span> <span class="mi">8</span>
+    <span class="n">total_needed</span> <span class="o">=</span> <span class="mi">96</span> <span class="o">+</span> <span class="n">needed_bits</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bits</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">total_needed</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ExtractionError</span><span class="p">(</span><span class="s2">&quot;Not enough data to read full message&quot;</span><span class="p">)</span>
+
+    <span class="n">message_bits</span> <span class="o">=</span> <span class="n">bits</span><span class="p">[</span><span class="mi">96</span><span class="p">:</span><span class="n">total_needed</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">bits_to_bytes</span><span class="p">(</span><span class="n">message_bits</span><span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Авторские права 2025. </p>
+  </div>
+
+  Собрано при помощи <a href="https://www.sphinx-doc.org/">Sphinx</a> с использованием
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">темы,</a>
+    предоставленной <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

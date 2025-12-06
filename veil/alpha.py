@@ -1,34 +1,52 @@
+"""
+Стеганография в альфа-канале изображения.
+
+Метод использует прозрачность (A-канал) для встраивания данных в формате LSB.
+Так как альфа-канал обычно слабо влияет на визуальное восприятие изображения,
+встраивание даже нескольких младших бит в каждый пиксель остаётся малозаметным.
+
+Поддерживается от 1 до 8 младших бит на канал, что даёт высокую вместимость
+и делает метод удобным для учебных демонстраций и переноса больших сообщений.
+"""
+
 from __future__ import annotations
-
 from typing import List
-
 from PIL import Image
-
-from core.utils import bytes_to_bits, bits_to_bytes,calculate_alpha_capacity
+from core.utils import bytes_to_bits, bits_to_bytes, calculate_alpha_capacity
 from core.exceptions import CapacityError, ExtractionError
 
 
 def embed_message(
-    image: Image.Image,
-    message: bytes,
-    bits_per_channel: int = 1,
+        image: Image.Image,
+        message: bytes,
+        bits_per_channel: int = 1,
 ) -> Image.Image:
-    """Embed message into alpha channel using LSB (or multi-bit) embedding.
+    """Встраивает сообщение в альфа-канал изображения.
 
-    Встраивается: 4 байта длины сообщения (big-endian) + само сообщение.
+    Метод использует технику LSB (Least Significant Bits) для скрытия данных
+    в прозрачности (A-канале). Количество используемых младших бит регулируется
+    параметром bits_per_channel (диапазон 1–8).
+
+    Формат полезной нагрузки::
+        [4 байта длины сообщения, big-endian] + [байты сообщения]
+
+    Алгоритм:
+        1. Исходное изображение переводится в режим RGBA.
+        2. Проверяется вместимость альфа-канала.
+        3. Сообщение переводится в поток бит.
+        4. В каждый пиксель записываются bits_per_channel младших бит.
 
     Args:
-        image: Source image (any mode, will be converted to RGBA).
-        message: Bytes to hide.
-        bits_per_channel: Number of least significant bits in alpha channel
-            used for embedding (1..8).
+        image: Исходное изображение (RGB или RGBA).
+        message: Скрываемые данные в виде байтов.
+        bits_per_channel: Количество младших бит для встраивания (1..8).
 
     Returns:
-        New Image with hidden data (mode RGBA).
+        Новое изображение RGBA с внедрённым сообщением.
 
     Raises:
-        ValueError: If bits_per_channel is out of [1, 8].
-        CapacityError: If message doesn't fit into alpha channel.
+        ValueError: Если bits_per_channel вне диапазона [1, 8].
+        CapacityError: Если сообщение не помещается при данных настройках.
     """
     if not (1 <= bits_per_channel <= 8):
         raise ValueError("bits_per_channel must be between 1 and 8")
@@ -50,6 +68,7 @@ def embed_message(
     width, height = rgba.size
 
     bit_index = 0
+    mask = (1 << bits_per_channel) - 1  # маска младших бит
 
     for y in range(height):
         for x in range(width):
@@ -60,16 +79,16 @@ def embed_message(
 
             remaining = total_bits - bit_index
             if remaining >= bits_per_channel:
-                chunk = payload_bits[bit_index:bit_index + bits_per_channel]
+                chunk = payload_bits[bit_index: bit_index + bits_per_channel]
             else:
+                # Дополняем нулями, если данные закончились
                 chunk = payload_bits[bit_index:total_bits] + [0] * (
-                    bits_per_channel - remaining
+                        bits_per_channel - remaining
                 )
 
-            # превращаем список битов в число 0..(2^bits_per_channel - 1)
+            # Превращаем битовую последовательность в число
             value = int("".join(str(bv) for bv in chunk), 2)
 
-            mask = (1 << bits_per_channel) - 1
             new_a = (a & ~mask) | value
 
             pixels[x, y] = (r, g, b, new_a)
@@ -79,23 +98,24 @@ def embed_message(
 
 
 def extract_message(
-    image: Image.Image,
-    bits_per_channel: int = 1,
+        image: Image.Image,
+        bits_per_channel: int = 1,
 ) -> bytes:
-    """Extract message hidden in alpha channel using LSB-like scheme.
+    """Извлекает сообщение, скрытое в альфа-канале.
 
-    Ожидается формат: 4 байта длины (big-endian) + сообщение.
+    Извлечение выполняется в том же порядке и объёме бит, что и при встраивании.
+    Первые 32 бита интерпретируются как длина сообщения, затем читаются данные.
 
     Args:
-        image: Image with hidden data (any mode, will be converted to RGBA).
-        bits_per_channel: Number of bits per alpha-channel used in embedding.
+        image: Изображение (RGB или RGBA) с возможным стего-сообщением.
+        bits_per_channel: Количество бит, использованное при встраивании (1..8).
 
     Returns:
-        Extracted payload (bytes).
+        Извлечённое сообщение в виде bytes.
 
     Raises:
-        ValueError: If bits_per_channel is out of [1, 8].
-        ExtractionError: If there is not enough data to read length or message.
+        ValueError: Если bits_per_channel вне диапазона 1..8.
+        ExtractionError: Если данных недостаточно для корректного извлечения.
     """
     if not (1 <= bits_per_channel <= 8):
         raise ValueError("bits_per_channel must be between 1 and 8")
@@ -111,12 +131,15 @@ def extract_message(
         for x in range(width):
             _, _, _, a = pixels[x, y]
             value = a & mask
+
+            # Получаем строку бит фиксированной длины bits_per_channel
             bitstring = format(value, f"0{bits_per_channel}b")
             bits.extend(int(b) for b in bitstring)
 
     if len(bits) < 32:
         raise ExtractionError("Not enough data to read message length")
 
+    # Длина сообщения — первые 32 бита
     length_bits = bits[:32]
     length_bytes = bits_to_bytes(length_bits)
     length = int.from_bytes(length_bytes, byteorder="big")
@@ -129,4 +152,5 @@ def extract_message(
 
     message_bits = bits[32:total_needed]
     message_bytes = bits_to_bytes(message_bits)
+
     return message_bytes

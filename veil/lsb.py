@@ -1,56 +1,50 @@
-from pathlib import Path
-from typing import Optional
 from PIL import Image
 from core.exceptions import CapacityError, ExtractionError
-from core.image_io import load_image, save_image
-from core.utils import bytes_to_bits, bits_to_bytes
-
-
-def calculate_capacity(image: Image.Image, bits_per_channel: int, channels: str) -> int:
-    """Calculate maximum payload capacity for the given image and settings.
-
-    Args:
-        image: Cover image.
-        bits_per_channel: Number of low-order bits per color channel used
-            for embedding (1–3 recommended).
-        channels: Color channels to use, e.g. "RGB", "RG", "B".
-
-    Returns:
-        Maximum number of bytes that can be embedded into the image.
-    """
-    if bits_per_channel <= 0:
-        raise ValueError("bits_per_channel must be positive")
-
-    width, height = image.size
-    num_pixels = width * height
-    num_channels = len(channels)
-    total_bits = num_pixels * bits_per_channel * num_channels
-    return total_bits // 8
+from core.utils import bytes_to_bits, bits_to_bytes, calculate_capacity
 
 
 def embed_message(
         image: Image.Image,
         message: bytes,
-        key: Optional[str] = None,
         bits_per_channel: int = 1,
         channels: str = "RGB",
 ) -> Image.Image:
-    """Embed a secret message into an image using basic LSB steganography.
+    """Встраивает сообщение в изображение методом базовой LSB-стеганографии.
 
-    Args:
-        image: Pillow Image object to be used as cover image.
-        message: Raw bytes of the message to hide.
-        key: Optional secret key (currently unused for ``mode="lsb"``).
-        bits_per_channel: Number of low-order bits used per color channel.
-        channels: Color channels to use, e.g. "RGB", "RG", "B".
+        Метод LSB (Least Significant Bit) изменяет младшие биты цветовых каналов
+        каждого пикселя изображения. Благодаря тому, что младшие биты вносят
+        минимальный вклад в итоговый цвет, изменения визуально практически
+        незаметны, что делает метод простым, но эффективным в учебных целях.
 
-    Returns:
-        New Pillow Image object containing the embedded message.
+        Формат полезной нагрузки::
 
-    Raises:
-        CapacityError: If the message does not fit into the image.
-    """
+            [4 байта длины сообщения в big-endian] + [данные сообщения]
 
+        Алгоритм работы:
+            1. Вычисляется вместимость изображения с учётом переданных параметров.
+            2. Формируется блок полезной нагрузки: длина + данные.
+            3. Полезная нагрузка переводится в поток бит.
+            4. Биты записываются в младшие разряды выбранных каналов (R/G/B).
+               Если bits_per_channel > 1, то в один канал записывается несколько бит сразу.
+            5. Процесс продолжается построчно по пикселям, пока все биты
+               полезной нагрузки не будут встроены.
+
+        Args:
+            image: Объект Pillow Image, используемый как контейнер.
+            message: Скрываемое сообщение в виде байтов.
+            bits_per_channel: Количество младших бит каждого канала,
+                в которые разрешено встраивание (1–8, зависит от задачи).
+            channels: Строка из символов «R», «G», «B», определяющая,
+                какие каналы используются для встраивания.
+
+        Returns:
+            Новое изображение Pillow с внедрённым сообщением.
+
+        Raises:
+            CapacityError: Если сообщение (включая длину) не помещается
+                в доступные биты изображения.
+            ValueError: Если передан неподдерживаемый канал.
+        """
     capacity = calculate_capacity(image, bits_per_channel, channels)
 
     length = len(message)
@@ -89,7 +83,7 @@ def embed_message(
                 elif ch == "B":
                     idx = 2
                 else:
-                    continue
+                    raise ValueError("Unsupported channel")
 
                 remaining = total_bits - bit_index
                 if remaining >= bits_per_channel:
@@ -113,27 +107,36 @@ def embed_message(
     return stego
 
 
-def extract(
+def extract_message(
         image: Image.Image,
-        key: Optional[str] = None,
         bits_per_channel: int = 1,
         channels: str = "RGB",
 ) -> bytes:
-    """Extract hidden message from an image encoded by ``embed_message``.
+    """Извлекает сообщение, встроенное методом LSB-стеганографии.
 
-    Args:
-        image: Pillow Image object that contains hidden data.
-        key: Optional secret key (currently unused for ``mode="lsb"``).
-        bits_per_channel: Number of low-order bits per color channel used
-            during embedding.
-        channels: Color channels used for embedding.
+        Ожидается тот же формат полезной нагрузки, который формирует embed_message:
 
-    Returns:
-        Raw bytes of the extracted hidden message.
+            [4 байта длины сообщения] + [сообщение]
 
-    Raises:
-        ExtractionError: If data cannot be correctly extracted.
-    """
+        Алгоритм работы:
+            1. Побитово извлекаются младшие биты выбранных цветовых каналов.
+            2. Из первых 32 бит формируется длина сообщения.
+            3. Далее извлекается указанное количество бит данных.
+            4. Биты конвертируются обратно в байты.
+
+        Args:
+            image: Изображение, содержащее скрытое сообщение.
+            bits_per_channel: Количество бит, использованных при встраивании.
+            channels: Каналы, по которым происходило встраивание.
+
+        Returns:
+            Извлечённое сообщение в виде байтов.
+
+        Raises:
+            ExtractionError: Если данных недостаточно для чтения длины
+                или полного сообщения.
+            ValueError: Если указан некорректный канал.
+        """
     pixels = image.load()
     width, height = image.size
 
@@ -180,41 +183,3 @@ def extract(
     message_bytes = bits_to_bytes(message_bits)
 
     return message_bytes
-
-
-def embed_file_to_file(
-        input_path: Path,
-        output_path: Path,
-        message: bytes,
-        key: Optional[str] = None,
-        mode: str = "lsb",
-        bits_per_channel: int = 1,
-        channels: str = "RGB",
-) -> None:
-    """Embed message bytes into an image file and save result to another file."""
-    image = load_image(input_path)
-    stego = embed_message(
-        image,
-        message=message,
-        key=key,
-        bits_per_channel=bits_per_channel,
-        channels=channels,
-    )
-    save_image(stego, output_path)
-
-
-def extract_from_file(
-        input_path: Path,
-        key: Optional[str] = None,
-        mode: str = "lsb",
-        bits_per_channel: int = 1,
-        channels: str = "RGB",
-) -> bytes:
-    """Extract hidden message bytes from an image file."""
-    image = load_image(input_path)
-    return extract(
-        image,
-        key=key,
-        bits_per_channel=bits_per_channel,
-        channels=channels,
-    )

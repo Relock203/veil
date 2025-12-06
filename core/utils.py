@@ -1,3 +1,7 @@
+from PIL import Image
+from typing import List, Tuple
+
+
 def bytes_to_bits(data: bytes) -> list[int]:
     bits = []
     for byte in data:
@@ -19,3 +23,141 @@ def bits_to_bytes(bits: list[int]) -> bytes:
         result.append(byte_int)
 
     return bytes(result)
+
+
+def calculate_capacity(image: Image.Image, bits_per_channel: int, channels: str) -> int:
+    if bits_per_channel <= 0:
+        raise ValueError("bits_per_channel must be positive")
+
+    width, height = image.size
+    num_pixels = width * height
+    num_channels = len(channels)
+    total_bits = num_pixels * bits_per_channel * num_channels
+    return total_bits // 8
+
+
+def get_range_info(d:int):
+    ranges = [
+        (0, 7, 3),
+        (8, 15, 3),
+        (16, 31, 4),
+        (32, 63, 5),
+        (64, 127, 6),
+        (128, 255, 7),
+    ]
+
+    for lower, upper, k in ranges:
+        if lower <= d <= upper:
+            return lower, upper, k
+    return 0, 7, 3
+
+
+def calculate_pvd_capacity(image, channel="R"):
+    pixels = image.load()
+    width, height = image.size
+
+    capacity_bits = 0
+
+    for y in range(height):
+        for x in range(0, width - 1, 2):
+            # берём два соседних пикселя
+            r0, g0, b0 = pixels[x, y]
+            r1, g1, b1 = pixels[x+1, y]
+
+            # выбираем один канал
+            if channel == "R":
+                v0, v1 = r0, r1
+            elif channel == "G":
+                v0, v1 = g0, g1
+            else:
+                v0, v1 = b0, b1
+
+            d = abs(v1 - v0)
+
+            lower, upper, k = get_range_info(d)
+            capacity_bits += k
+
+    return capacity_bits // 8
+
+
+def choose_target_difference(
+        d: int,
+        lower: int,
+        upper: int,
+        k: int,
+        b_val: int
+) -> int:
+    mod = 2 ** k
+    res = []
+    for cand in range(lower, upper + 1):
+        if cand % mod == b_val:
+            d1 = abs(d - cand)
+            res.append((d1, cand))
+    return min(res)[1]
+
+
+def calculate_alpha_capacity(image: Image.Image, bits_per_channel: int = 1) -> int:
+    if not (1 <= bits_per_channel <= 8):
+        raise ValueError("bits_per_channel must be between 1 and 8")
+
+    rgba = image.convert("RGBA")
+    width, height = rgba.size
+    num_pixels = width * height
+
+    total_bits = num_pixels * bits_per_channel
+    capacity_bytes = total_bits // 8
+    return capacity_bytes
+
+
+def border_coordinates(width: int, height: int) -> List[Tuple[int, int]]:
+    coords: List[Tuple[int, int]] = []
+
+    if width <= 0 or height <= 0:
+        return coords
+
+    if width == 1 and height == 1:
+        return [(0, 0)]
+
+    if width == 1:
+        for y in range(height):
+            coords.append((0, y))
+        return coords
+
+    if height == 1:
+        for x in range(width):
+            coords.append((x, 0))
+        return coords
+
+    for x in range(width):
+        coords.append((x, 0))
+
+    for y in range(1, height - 1):
+        coords.append((width - 1, y))
+
+    for x in range(width - 1, -1, -1):
+        coords.append((x, height - 1))
+
+    for y in range(height - 2, 0, -1):
+        coords.append((0, y))
+
+    return coords
+
+
+def calculate_border_capacity(
+    image: Image.Image,
+    bits_per_channel: int = 1,
+    channels: str = "RGB",
+) -> int:
+    if bits_per_channel < 1:
+        raise ValueError("bits_per_channel must be >= 1")
+
+    rgb = image.convert("RGB")
+    width, height = rgb.size
+
+    border_coords = border_coordinates(width, height)
+    num_pixels = len(border_coords)
+    num_channels = len(channels)
+
+    total_bits = num_pixels * num_channels * bits_per_channel
+    capacity_bytes = total_bits // 8
+    return capacity_bytes

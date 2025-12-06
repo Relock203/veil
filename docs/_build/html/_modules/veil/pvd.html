@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="ru" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>veil.pvd &mdash; документация Veil 1.0.0</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=5f6e15f3" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=e35015f7"></script>
+        <script src="../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../_static/translations.js?v=29b1f277"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Алфавитный указатель" href="../../genindex.html" />
+    <link rel="search" title="Поиск" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Veil
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Поиск в документации" aria-label="Поиск в документации" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Меню навигации">
+              <p class="caption" role="heading"><span class="caption-text">Основные разделы</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Введение</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Использование Veil</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../stego_methods.html">Методы стеганографии</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../stego_api.html">API стеганографических методов</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Меню навигации для мобильных устройств" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Veil</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Навигация по страницам">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Код модуля</a></li>
+      <li class="breadcrumb-item active">veil.pvd</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Исходный код veil.pvd</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Реализация метода PVD (Pixel Value Differencing) для стеганографии.</span>
+
+<span class="sd">Метод PVD (разностная стеганография) использует разность яркостей двух</span>
+<span class="sd">соседних пикселей в изображении для определения количества бит, которые</span>
+<span class="sd">можно встроить в данную область. Чем больше локальный контраст (разность</span>
+<span class="sd">значений), тем большее число бит можно скрыть без заметных артефактов.</span>
+
+<span class="sd">Алгоритм адаптивный: изображение автоматически подбирает допустимое</span>
+<span class="sd">количество скрываемой информации на основе локальных характеристик.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">core.utils</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">utils</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">core.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">CapacityError</span><span class="p">,</span> <span class="n">ExtractionError</span>
+
+
+<div class="viewcode-block" id="embed_message">
+<a class="viewcode-back" href="../../stego_api.html#veil.pvd.embed_message">[документация]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">embed_message</span><span class="p">(</span>
+        <span class="n">image</span><span class="p">:</span> <span class="n">Image</span><span class="o">.</span><span class="n">Image</span><span class="p">,</span>
+        <span class="n">message</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span>
+        <span class="n">channels</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;R&quot;</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Image</span><span class="o">.</span><span class="n">Image</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Встраивает сообщение методом PVD (Pixel Value Differencing).</span>
+
+<span class="sd">    Метод работает с парами соседних пикселей: (p0, p1).</span>
+<span class="sd">    Для каждой пары вычисляется разность d = |p1 - p0|, затем на основании</span>
+<span class="sd">    величины d выбирается диапазон (lower, upper) и количество бит k, которые</span>
+<span class="sd">    можно безопасно встроить в данную локальную область.</span>
+
+<span class="sd">    Далее:</span>
+<span class="sd">      * из бит сообщения берутся k бит;</span>
+<span class="sd">      * эти k бит интерпретируются как число b_val;</span>
+<span class="sd">      * выбирается новая разность d_new в диапазоне [lower, upper] так,</span>
+<span class="sd">        чтобы d_new % 2^k == b_val;</span>
+<span class="sd">      * пиксели корректируются так, чтобы их разность стала именно d_new.</span>
+
+<span class="sd">    Такой подход делает метод визуально устойчивым, поскольку большое</span>
+<span class="sd">    количество данных встраивается преимущественно в области с реальным</span>
+<span class="sd">    высоким контрастом (границы, текстуры), где искажения слабо заметны.</span>
+
+<span class="sd">    Формат полезной нагрузки:</span>
+<span class="sd">        [4 байта длины в big-endian] + [байты сообщения]</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        image: Изображение Pillow (RGB).</span>
+<span class="sd">        message: Данные для скрытия (bytes).</span>
+<span class="sd">        channels: Строка каналов (&quot;R&quot;, &quot;G&quot;, &quot;B&quot; или комбинации):</span>
+<span class="sd">            PVD применяется по каждому выбранному каналу.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Новое изображение Pillow с внедрёнными данными.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        CapacityError: Если сообщение превышает доступную вместимость метода.</span>
+<span class="sd">        ValueError: Если указан неподдерживаемый канал.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">capacity</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">calculate_pvd_capacity</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">channels</span><span class="p">)</span>
+
+    <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+    <span class="n">length_bytes</span> <span class="o">=</span> <span class="n">length</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">byteorder</span><span class="o">=</span><span class="s1">&#39;big&#39;</span><span class="p">)</span>
+    <span class="n">payload</span> <span class="o">=</span> <span class="n">length_bytes</span> <span class="o">+</span> <span class="n">message</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">capacity</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">CapacityError</span><span class="p">(</span><span class="s2">&quot;Message is too large for given image and settings&quot;</span><span class="p">)</span>
+
+    <span class="n">payload_bits</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">bytes_to_bits</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+
+    <span class="n">stego</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">pixels</span> <span class="o">=</span> <span class="n">stego</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
+    <span class="n">width</span><span class="p">,</span> <span class="n">height</span> <span class="o">=</span> <span class="n">stego</span><span class="o">.</span><span class="n">size</span>
+
+    <span class="n">bit_index</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">total_bits</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">payload_bits</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">height</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">width</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">):</span>
+            <span class="c1"># Все биты полезной нагрузки встроены — возвращаем изображение.</span>
+            <span class="k">if</span> <span class="n">bit_index</span> <span class="o">&gt;=</span> <span class="n">total_bits</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">stego</span>
+
+            <span class="c1"># Берём пару пикселей</span>
+            <span class="n">r0</span><span class="p">,</span> <span class="n">g0</span><span class="p">,</span> <span class="n">b0</span> <span class="o">=</span> <span class="n">pixels</span><span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">]</span>
+            <span class="n">r1</span><span class="p">,</span> <span class="n">g1</span><span class="p">,</span> <span class="n">b1</span> <span class="o">=</span> <span class="n">pixels</span><span class="p">[</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">y</span><span class="p">]</span>
+
+            <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="n">channels</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">ch</span> <span class="o">==</span> <span class="s2">&quot;R&quot;</span><span class="p">:</span>
+                    <span class="n">v0</span><span class="p">,</span> <span class="n">v1</span> <span class="o">=</span> <span class="n">r0</span><span class="p">,</span> <span class="n">r1</span>
+                <span class="k">elif</span> <span class="n">ch</span> <span class="o">==</span> <span class="s2">&quot;G&quot;</span><span class="p">:</span>
+                    <span class="n">v0</span><span class="p">,</span> <span class="n">v1</span> <span class="o">=</span> <span class="n">g0</span><span class="p">,</span> <span class="n">g1</span>
+                <span class="k">elif</span> <span class="n">ch</span> <span class="o">==</span> <span class="s2">&quot;B&quot;</span><span class="p">:</span>
+                    <span class="n">v0</span><span class="p">,</span> <span class="n">v1</span> <span class="o">=</span> <span class="n">b0</span><span class="p">,</span> <span class="n">b1</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unsupported channel&quot;</span><span class="p">)</span>
+
+                <span class="c1"># 1) Вычисление существующей разности</span>
+                <span class="n">d</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">v1</span> <span class="o">-</span> <span class="n">v0</span><span class="p">)</span>
+
+                <span class="c1"># 2) Определяем диапазон (lower, upper) и количество бит k</span>
+                <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">,</span> <span class="n">k</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">get_range_info</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+
+                <span class="c1"># 3) Берём k бит сообщения</span>
+                <span class="n">chunk</span> <span class="o">=</span> <span class="n">payload_bits</span><span class="p">[</span><span class="n">bit_index</span><span class="p">:</span><span class="n">bit_index</span> <span class="o">+</span> <span class="n">k</span><span class="p">]</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">k</span><span class="p">:</span>
+                    <span class="n">chunk</span> <span class="o">+=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">k</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">))</span>
+
+                <span class="n">b_val</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">chunk</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span>
+
+                <span class="c1"># 4) Выбираем новую разность d_new, удовлетворяющую условию</span>
+                <span class="c1">#    d_new % (2^k) == b_val</span>
+                <span class="n">d_new</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">choose_target_difference</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">b_val</span><span class="p">)</span>
+
+                <span class="c1"># Определяем знак (порядок пикселей сохраняется)</span>
+                <span class="n">sign</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">v1</span> <span class="o">&gt;=</span> <span class="n">v0</span> <span class="k">else</span> <span class="o">-</span><span class="mi">1</span>
+
+                <span class="c1"># Корректируем значения так, чтобы разность стала d_new</span>
+                <span class="k">if</span> <span class="n">sign</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">min_v0</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="n">max_v0</span> <span class="o">=</span> <span class="mi">255</span> <span class="o">-</span> <span class="n">d_new</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">min_v0</span> <span class="o">=</span> <span class="n">d_new</span>
+                    <span class="n">max_v0</span> <span class="o">=</span> <span class="mi">255</span>
+
+                <span class="n">v0_new</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">v0</span><span class="p">,</span> <span class="n">min_v0</span><span class="p">),</span> <span class="n">max_v0</span><span class="p">)</span>
+                <span class="n">v1_new</span> <span class="o">=</span> <span class="n">v0_new</span> <span class="o">+</span> <span class="n">sign</span> <span class="o">*</span> <span class="n">d_new</span>
+
+                <span class="c1"># Ограничиваем результат диапазоном 0–255</span>
+                <span class="n">v0_new</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="mi">255</span><span class="p">,</span> <span class="n">v0_new</span><span class="p">))</span>
+                <span class="n">v1_new</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="mi">255</span><span class="p">,</span> <span class="n">v1_new</span><span class="p">))</span>
+
+                <span class="c1"># Обновляем соответствующий канал</span>
+                <span class="k">if</span> <span class="n">ch</span> <span class="o">==</span> <span class="s2">&quot;R&quot;</span><span class="p">:</span>
+                    <span class="n">r0</span><span class="p">,</span> <span class="n">r1</span> <span class="o">=</span> <span class="n">v0_new</span><span class="p">,</span> <span class="n">v1_new</span>
+                <span class="k">elif</span> <span class="n">ch</span> <span class="o">==</span> <span class="s2">&quot;G&quot;</span><span class="p">:</span>
+                    <span class="n">g0</span><span class="p">,</span> <span class="n">g1</span> <span class="o">=</span> <span class="n">v0_new</span><span class="p">,</span> <span class="n">v1_new</span>
+                <span class="k">elif</span> <span class="n">ch</span> <span class="o">==</span> <span class="s2">&quot;B&quot;</span><span class="p">:</span>
+                    <span class="n">b0</span><span class="p">,</span> <span class="n">b1</span> <span class="o">=</span> <span class="n">v0_new</span><span class="p">,</span> <span class="n">v1_new</span>
+
+                <span class="n">bit_index</span> <span class="o">+=</span> <span class="n">k</span>
+
+            <span class="n">pixels</span><span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">r0</span><span class="p">,</span> <span class="n">g0</span><span class="p">,</span> <span class="n">b0</span><span class="p">)</span>
+            <span class="n">pixels</span><span class="p">[</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">y</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">r1</span><span class="p">,</span> <span class="n">g1</span><span class="p">,</span> <span class="n">b1</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">stego</span></div>
+
+
+
+<div class="viewcode-block" id="extract_message">
+<a class="viewcode-back" href="../../stego_api.html#veil.pvd.extract_message">[документация]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">extract_message</span><span class="p">(</span>
+        <span class="n">image</span><span class="p">:</span> <span class="n">Image</span><span class="o">.</span><span class="n">Image</span><span class="p">,</span>
+        <span class="n">channels</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;R&quot;</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Извлекает сообщение, встроенное методом PVD.</span>
+
+<span class="sd">    Для каждой пары пикселей (v0, v1):</span>
+<span class="sd">        * вычисляется разность d = |v1 - v0|;</span>
+<span class="sd">        * определяется число бит k для данной разности;</span>
+<span class="sd">        * восстанавливается значение b_val = d % (2^k);</span>
+<span class="sd">        * эти k бит добавляются к общему потоку полезной нагрузки.</span>
+
+<span class="sd">    После накопления бит:</span>
+<span class="sd">        * первые 32 бита интерпретируются как длина сообщения;</span>
+<span class="sd">        * затем извлекаются оставшиеся биты данных.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        image: Изображение с предполагаемыми встроенными данными.</span>
+<span class="sd">        channels: Каналы, по которым происходило встраивание.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Извлечённые данные (bytes).</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ExtractionError: Если данных недостаточно для чтения длины или сообщения.</span>
+<span class="sd">        ValueError: Если канал указан неверно.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">pixels</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
+    <span class="n">width</span><span class="p">,</span> <span class="n">height</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">size</span>
+
+    <span class="n">bits</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">height</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">width</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">):</span>
+            <span class="n">r0</span><span class="p">,</span> <span class="n">g0</span><span class="p">,</span> <span class="n">b0</span> <span class="o">=</span> <span class="n">pixels</span><span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">]</span>
+            <span class="n">r1</span><span class="p">,</span> <span class="n">g1</span><span class="p">,</span> <span class="n">b1</span> <span class="o">=</span> <span class="n">pixels</span><span class="p">[</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">y</span><span class="p">]</span>
+
+            <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="n">channels</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">ch</span> <span class="o">==</span> <span class="s2">&quot;R&quot;</span><span class="p">:</span>
+                    <span class="n">v0</span><span class="p">,</span> <span class="n">v1</span> <span class="o">=</span> <span class="n">r0</span><span class="p">,</span> <span class="n">r1</span>
+                <span class="k">elif</span> <span class="n">ch</span> <span class="o">==</span> <span class="s2">&quot;G&quot;</span><span class="p">:</span>
+                    <span class="n">v0</span><span class="p">,</span> <span class="n">v1</span> <span class="o">=</span> <span class="n">g0</span><span class="p">,</span> <span class="n">g1</span>
+                <span class="k">elif</span> <span class="n">ch</span> <span class="o">==</span> <span class="s2">&quot;B&quot;</span><span class="p">:</span>
+                    <span class="n">v0</span><span class="p">,</span> <span class="n">v1</span> <span class="o">=</span> <span class="n">b0</span><span class="p">,</span> <span class="n">b1</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unsupported channel&quot;</span><span class="p">)</span>
+
+                <span class="n">d</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">v1</span> <span class="o">-</span> <span class="n">v0</span><span class="p">)</span>
+                <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">,</span> <span class="n">k</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">get_range_info</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+
+                <span class="n">b_val</span> <span class="o">=</span> <span class="n">d</span> <span class="o">%</span> <span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">k</span><span class="p">)</span>
+
+                <span class="c1"># Разбиваем b_val на k бит: старший → младший</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">k</span><span class="p">)):</span>
+                    <span class="n">bit</span> <span class="o">=</span> <span class="p">(</span><span class="n">b_val</span> <span class="o">&gt;&gt;</span> <span class="n">i</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mi">1</span>
+                    <span class="n">bits</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">bit</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bits</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">32</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ExtractionError</span><span class="p">(</span><span class="s2">&quot;Not enough data to read message length&quot;</span><span class="p">)</span>
+
+    <span class="n">length_bits</span> <span class="o">=</span> <span class="n">bits</span><span class="p">[:</span><span class="mi">32</span><span class="p">]</span>
+    <span class="n">length_bytes</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">bits_to_bytes</span><span class="p">(</span><span class="n">length_bits</span><span class="p">)</span>
+    <span class="n">length</span> <span class="o">=</span> <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">length_bytes</span><span class="p">,</span> <span class="n">byteorder</span><span class="o">=</span><span class="s2">&quot;big&quot;</span><span class="p">)</span>
+
+    <span class="n">needed_bits</span> <span class="o">=</span> <span class="n">length</span> <span class="o">*</span> <span class="mi">8</span>
+    <span class="n">total_needed</span> <span class="o">=</span> <span class="mi">32</span> <span class="o">+</span> <span class="n">needed_bits</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bits</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">total_needed</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ExtractionError</span><span class="p">(</span><span class="s2">&quot;Not enough data to read full message&quot;</span><span class="p">)</span>
+
+    <span class="n">message_bits</span> <span class="o">=</span> <span class="n">bits</span><span class="p">[</span><span class="mi">32</span><span class="p">:</span><span class="n">total_needed</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">utils</span><span class="o">.</span><span class="n">bits_to_bytes</span><span class="p">(</span><span class="n">message_bits</span><span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Авторские права 2025. </p>
+  </div>
+
+  Собрано при помощи <a href="https://www.sphinx-doc.org/">Sphinx</a> с использованием
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">темы,</a>
+    предоставленной <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

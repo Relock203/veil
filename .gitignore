@@ -1,19 +1,14 @@
 # IDE & project files
 .idea/
 .vscode/
-*.iml
 
 # Python cache
 __pycache__/
-*.pyc
 
 # Virtual environments
 .venv/
+.venv1
 env/
 
 # pytest cache
 .pytest_cache/
-
-# OS files
-Thumbs.db
-.DS_Store

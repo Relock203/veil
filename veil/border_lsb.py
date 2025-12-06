@@ -1,34 +1,54 @@
+"""
+Стеганография, выполняемая только по границе изображения.
+
+Метод Border-LSB использует только граничные (бордерные) пиксели изображения
+для скрытия данных. Это снижает визуальную заметность изменений, поскольку
+большинство изображений имеют более выраженные края.
+
+Используются выбранные цветовые каналы (R, G, B); в каждый канал можно
+встраивать от 1 до нескольких младших бит.
+"""
+
 from typing import List
-
 from PIL import Image
-
-from core.utils import bytes_to_bits, bits_to_bytes, calculate_border_capacity, border_coordinates
+from core.utils import (
+    bytes_to_bits,
+    bits_to_bytes,
+    calculate_border_capacity,
+    border_coordinates,
+)
 from core.exceptions import CapacityError, ExtractionError
 
 
 def embed_message(
-    image: Image.Image,
-    message: bytes,
-    bits_per_channel: int = 1,
-    channels: str = "RGB",
+        image: Image.Image,
+        message: bytes,
+        bits_per_channel: int = 1,
+        channels: str = "RGB",
 ) -> Image.Image:
-    """Embed message using LSB in border pixels only.
+    """Встраивает сообщение в граничные пиксели изображения.
 
-    Формат полезной нагрузки:
-    - 4 байта длины (big-endian)
-    - сами данные
+    Метод работает полностью по LSB (младшим битам), но только по
+    пикселям на бордере. Это даёт:
+        * более низкую заметность искажений;
+        * предсказуемое ограниченное пространство для встраивания;
+        * простоту реализации.
+
+    Формат полезной нагрузки::
+        [4 байта длины сообщения, big-endian] + [байты сообщения]
 
     Args:
-        image: Source image (any mode, converted to RGB internally).
-        message: Bytes to hide.
-        bits_per_channel: How many LSBs to use per channel (>=1).
-        channels: Which color channels to use, subset of "RGB".
+        image: Исходное изображение (будет конвертировано в RGB).
+        message: Данные для встраивания.
+        bits_per_channel: Количество младших бит на каждый выбранный канал.
+        channels: Набор каналов, например "R", "G", "B" или "RGB".
 
     Returns:
-        New Image with hidden data (mode RGB).
+        Новое изображение RGB с внедрённым сообщением.
 
     Raises:
-        CapacityError: If message does not fit into border capacity.
+        ValueError: Если bits_per_channel < 1.
+        CapacityError: Если сообщение не помещается в бордер изображения.
     """
     if bits_per_channel < 1:
         raise ValueError("bits_per_channel must be >= 1")
@@ -70,14 +90,16 @@ def embed_message(
             elif ch == "B":
                 idx = 2
             else:
+                # Некорректные каналы просто игнорируются
                 continue
 
             remaining = total_bits - bit_index
             if remaining >= bits_per_channel:
                 chunk = payload_bits[bit_index:bit_index + bits_per_channel]
             else:
+                # Добавляем недостающие нули, если сообщение закончилось
                 chunk = payload_bits[bit_index:total_bits] + [0] * (
-                    bits_per_channel - remaining
+                        bits_per_channel - remaining
                 )
 
             value_bits = int("".join(str(bv) for bv in chunk), 2)
@@ -92,22 +114,29 @@ def embed_message(
 
 
 def extract_message(
-    image: Image.Image,
-    bits_per_channel: int = 1,
-    channels: str = "RGB",
+        image: Image.Image,
+        bits_per_channel: int = 1,
+        channels: str = "RGB",
 ) -> bytes:
-    """Extract message hidden in border pixels using LSB.
+    """Извлекает сообщение, спрятанное на границе изображения.
+
+    Извлечение выполняется точно в том же порядке обхода граничных пикселей,
+    что и встраивание.
+
+    Первые 32 бита трактуются как длина сообщения. Затем извлекаются биты
+    полезной нагрузки.
 
     Args:
-        image: Image with hidden data (any mode, converted to RGB internally).
-        bits_per_channel: Same as used in embedding.
-        channels: Same channels as used in embedding.
+        image: Изображение с возможным стего-сообщением.
+        bits_per_channel: Количество бит, использованных при встраивании.
+        channels: Те же каналы, что использовались при создании стегоизображения.
 
     Returns:
-        Extracted payload bytes.
+        Извлечённые байты сообщения.
 
     Raises:
-        ExtractionError: If cannot read length or full message.
+        ValueError: Если bits_per_channel < 1.
+        ExtractionError: Если невозможно корректно считать длину или полное сообщение.
     """
     if bits_per_channel < 1:
         raise ValueError("bits_per_channel must be >= 1")
@@ -136,9 +165,9 @@ def extract_message(
             mask = (1 << bits_per_channel) - 1
             value = values[idx] & mask
             bitstring = format(value, f"0{bits_per_channel}b")
+
             bits.extend(int(bv) for bv in bitstring)
 
-    # Нужно минимум 32 бита для длины
     if len(bits) < 32:
         raise ExtractionError("Not enough data to read message length")
 

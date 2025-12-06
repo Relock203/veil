@@ -1,19 +1,36 @@
+"""
+Генерация визуализации LSB-плоскости (Least Significant Bit Plane).
+
+LSB-плоскость — это изображение, где каждый пиксель показывает младший бит
+соответствующего цветового канала исходного изображения. Такое отображение
+часто используется в стегоанализе для выявления подозрительных структур,
+возникающих из-за примитивных методов LSB-стеганографии.
+
+Если LSB распределены случайно, изображение выглядит как шум.
+Если распределение нарушено — появляются текстуры, сетки и другие аномалии.
+"""
+
 from PIL import Image
 
 
 def lsb_plane_image(image: Image.Image, channel: str = "R") -> Image.Image:
-    """Build a visualization of LSB plane for a given channel.
+    """Строит изображение LSB-плоскости для выбранного цветового канала.
 
-    Создаёт чёрно-белую картинку (mode "L"), где:
-      - 0   → LSB = 0 (чёрный)
-      - 255 → LSB = 1 (белый)
+    Каждый пиксель результата равен:
+        - 0   (чёрный), если младший бит канала = 0
+        - 255 (белый),  если младший бит канала = 1
+
+    Это позволяет визуально анализировать распределение LSB.
 
     Args:
-        image: Входное изображение (конвертируется в RGB).
-        channel: Один канал: "R", "G" или "B".
+        image: Входное изображение (будет преобразовано в RGB).
+        channel: Цветовой канал: "R", "G" или "B".
 
     Returns:
-        Изображение mode="L" такого же размера, как исходное.
+        Изображение mode="L" того же размера, где LSB отображён как ч/б картинка.
+
+    Raises:
+        ValueError: Если канал указан неверно.
     """
     ch = channel.upper()
     if ch not in ("R", "G", "B"):
@@ -29,6 +46,7 @@ def lsb_plane_image(image: Image.Image, channel: str = "R") -> Image.Image:
     for y in range(height):
         for x in range(width):
             r, g, b = pixels[x, y]
+
             if ch == "R":
                 v = r
             elif ch == "G":
@@ -36,7 +54,6 @@ def lsb_plane_image(image: Image.Image, channel: str = "R") -> Image.Image:
             else:
                 v = b
 
-            lsb = v & 1
-            out[x, y] = 255 if lsb == 1 else 0
+            out[x, y] = 255 if (v & 1) else 0
 
     return result

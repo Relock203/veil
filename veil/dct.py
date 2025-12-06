@@ -1,13 +1,29 @@
-from __future__ import annotations
+"""
+Экспериментальный метод частотной стеганографии на основе DCT (дискретного
+косинусного преобразования), по аналогии с JPEG.
+
+Основная идея:
+    1. Изображение преобразуется в пространство YCbCr.
+    2. Стеганография выполняется в яркостном канале (Y), т.к. он наиболее
+       устойчив к искажениям и важен для зрительного восприятия.
+    3. Изображение разбивается на блоки 8×8.
+    4. Для каждого блока вычисляется DCT.
+    5. Несколько AC-коэффициентов заменяются на их значения с изменённым LSB.
+    6. Выполняется обратное DCT → сборка изображения → преобразование в RGB.
+
+Метод нестабилен из-за ошибок округления и применения float в DCT/IDCT.
+Используется только как экспериментальная демонстрация частотной стеганографии.
+"""
+
 from typing import List, Tuple
 from math import cos, pi
 from PIL import Image
 from core.utils import bytes_to_bits, bits_to_bytes
 from core.exceptions import CapacityError, ExtractionError
 
-
 BLOCK_SIZE = 8
 
+# Частоты, в которые мы встраиваем 1 бит
 CANDIDATE_POSITIONS: List[Tuple[int, int]] = [
     (2, 3),
     (3, 2),
@@ -16,6 +32,19 @@ CANDIDATE_POSITIONS: List[Tuple[int, int]] = [
 
 
 def _image_to_luma_blocks(image: Image.Image) -> Tuple[List[List[List[float]]], int, int]:
+    """Преобразует изображение в яркостный канал (L) и разбивает на блоки 8×8.
+
+    Для корректности DCT все размеры должны быть кратны 8, поэтому изображение
+    дополняется паддингом справа и снизу до ближайшего размера, делящегося на 8.
+
+    Args:
+        image: Исходное изображение Pillow.
+
+    Returns:
+        blocks: Список блоков 8×8, каждый блок — матрица float.
+        width: Исходная ширина изображения.
+        height: Исходная высота изображения.
+    """
     luma = image.convert("L")
     width, height = luma.size
 
@@ -40,6 +69,19 @@ def _image_to_luma_blocks(image: Image.Image) -> Tuple[List[List[List[float]]], 
 
 
 def _luma_blocks_to_image(blocks: List[List[List[float]]], width: int, height: int) -> Image.Image:
+    """Собирает изображение из блоков яркости (после IDCT).
+
+    Блоки записываются в изображение с учётом паддинга; затем изображение
+    обрезается до исходного размера.
+
+    Args:
+        blocks: Список блоков 8×8.
+        width: Исходная ширина изображения.
+        height: Исходная высота изображения.
+
+    Returns:
+        Восстановленное изображение в режиме L.
+    """
     padded_width = (width + 7) // 8 * 8
     padded_height = (height + 7) // 8 * 8
 
@@ -63,7 +105,17 @@ def _luma_blocks_to_image(blocks: List[List[List[float]]], width: int, height: i
 
 
 def _dct_2d(block: List[List[float]]) -> List[List[float]]:
-    n = BLOCK_SIZE  # 8
+    """Вычисляет двумерное дискретное косинусное преобразование (DCT-II).
+
+    Полная реализация формулы DCT-II без квантования.
+
+    Args:
+        block: Матрица 8×8 яркостей.
+
+    Returns:
+        Матрица коэффициентов DCT 8×8.
+    """
+    n = BLOCK_SIZE
     result = [[0.0 for _ in range(n)] for _ in range(n)]
 
     def alpha(k: int) -> float:
@@ -75,9 +127,9 @@ def _dct_2d(block: List[List[float]]) -> List[List[float]]:
             for y in range(n):
                 for x in range(n):
                     sum_val += (
-                        block[y][x]
-                        * cos((2 * x + 1) * u * pi / (2 * n))
-                        * cos((2 * y + 1) * v * pi / (2 * n))
+                            block[y][x]
+                            * cos((2 * x + 1) * u * pi / (2 * n))
+                            * cos((2 * y + 1) * v * pi / (2 * n))
                     )
 
             result[v][u] = 0.25 * alpha(u) * alpha(v) * sum_val
@@ -86,6 +138,14 @@ def _dct_2d(block: List[List[float]]) -> List[List[float]]:
 
 
 def _idct_2d(coeffs: List[List[float]]) -> List[List[float]]:
+    """Выполняет обратное двумерное DCT (IDCT).
+
+    Args:
+        coeffs: Матрица коэффициентов DCT 8×8.
+
+    Returns:
+        Восстановленный блок яркости 8×8.
+    """
     n = BLOCK_SIZE
     result = [[0.0 for _ in range(n)] for _ in range(n)]
 
@@ -110,17 +170,38 @@ def _idct_2d(coeffs: List[List[float]]) -> List[List[float]]:
 
 
 def calculate_dct_capacity(image: Image.Image) -> int:
+    """Вычисляет вместимость частотного контейнера в байтах.
+
+    Каждому блоку 8×8 соответствует len(CANDIDATE_POSITIONS) бит полезных данных.
+    """
     blocks = _image_to_luma_blocks(image)[0]
     num_blocks = len(blocks)
     total_bits = num_blocks * len(CANDIDATE_POSITIONS)
-    capacity_bytes = total_bits // 8
-    return capacity_bytes
+    return total_bits // 8
 
 
-def embed_message(
-        image: Image.Image,
-        message: bytes,
-) -> Image.Image:
+def embed_message(image: Image.Image, message: bytes) -> Image.Image:
+    """Встраивает сообщение методом DCT-LSB в яркостный канал изображения.
+
+    Метод:
+        * изображение переводится в YCbCr;
+        * яркостный канал (Y) разбивается на блоки 8×8;
+        * в несколько AC-коэффициентов каждого блока встраивается по 1 биту;
+        * выполняется обратное DCT и сборка изображения.
+
+    Встраивается "тройной заголовок" (length * 3), чтобы повысить шанс
+    корректного восстановления длины при погрешностях float.
+
+    Args:
+        image: Изображение RGB.
+        message: Байты сообщения.
+
+    Returns:
+        Изображение RGB со встроенными данными.
+
+    Raises:
+        CapacityError: Если данные не помещаются в изображение.
+    """
     ycbcr = image.convert("YCbCr")
     Y, Cb, Cr = ycbcr.split()
 
@@ -128,7 +209,7 @@ def embed_message(
 
     length = len(message)
     header = length.to_bytes(4, byteorder="big")
-    header3 = header * 3  # 12 байт = 96 бит
+    header3 = header * 3  # 12 байт, 96 бит
 
     payload = header3 + message
 
@@ -163,21 +244,31 @@ def embed_message(
 
         new_blocks.append(coeffs)
 
-    spatial_blocks: List[List[List[float]]] = []
-    for coeffs in new_blocks:
-        spatial_block = _idct_2d(coeffs)
-        spatial_blocks.append(spatial_block)
-
+    spatial_blocks = [_idct_2d(c) for c in new_blocks]
     stego_Y = _luma_blocks_to_image(spatial_blocks, width, height)
 
     stego_ycbcr = Image.merge("YCbCr", (stego_Y, Cb, Cr))
-    stego_rgb = stego_ycbcr.convert("RGB")
-    return stego_rgb
+    return stego_ycbcr.convert("RGB")
 
 
-def extract_message(
-        image: Image.Image,
-) -> bytes:
+def extract_message(image: Image.Image) -> bytes:
+    """Извлекает сообщение, встроенное методом DCT-LSB.
+
+    Возврат длины:
+        Встраивается три заголовка подряд, поэтому при извлечении
+        вычисляются три разных значения длины (h1, h2, h3).
+        Если хотя бы два совпадают — принимаем это значение.
+
+    Args:
+        image: Стего-изображение RGB.
+
+    Returns:
+        Извлечённое сообщение.
+
+    Raises:
+        ExtractionError: Если не удаётся корректно извлечь длину
+            или полезные данные.
+    """
     ycbcr = image.convert("YCbCr")
     Y, _, _ = ycbcr.split()
 
@@ -191,8 +282,7 @@ def extract_message(
         for (v, u) in CANDIDATE_POSITIONS:
             val = coeffs[v][u]
             ival = int(round(val))
-            lsb = ival & 1
-            bits.append(lsb)
+            bits.append(ival & 1)
 
     if len(bits) < 96:
         raise ExtractionError("Not enough data to read header")
@@ -206,10 +296,7 @@ def extract_message(
     h2 = int.from_bytes(bits_to_bytes(h2_bits), "big")
     h3 = int.from_bytes(bits_to_bytes(h3_bits), "big")
 
-    print("DEBUG h1, h2, h3:", h1, h2, h3)
-    print("DEBUG first 64 bits:", bits[:64])
     candidates = [h1, h2, h3]
-    # ищем значение, которое встречается хотя бы два раза
     length = None
     for val in candidates:
         if candidates.count(val) >= 2:
@@ -226,5 +313,4 @@ def extract_message(
         raise ExtractionError("Not enough data to read full message")
 
     message_bits = bits[96:total_needed]
-    message_bytes = bits_to_bytes(message_bits)
-    return message_bytes
+    return bits_to_bytes(message_bits)

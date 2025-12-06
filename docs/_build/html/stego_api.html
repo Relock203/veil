@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="ru" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API стеганографических методов &mdash; документация Veil 1.0.0</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=5f6e15f3" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=e35015f7"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="_static/translations.js?v=29b1f277"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Алфавитный указатель" href="genindex.html" />
+    <link rel="search" title="Поиск" href="search.html" />
+    <link rel="prev" title="Методы стеганографии" href="stego_methods.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Veil
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Поиск в документации" aria-label="Поиск в документации" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Меню навигации">
+              <p class="caption" role="heading"><span class="caption-text">Основные разделы</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Введение</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Использование Veil</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stego_methods.html">Методы стеганографии</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API стеганографических методов</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-veil.lsb">LSB</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#veil.lsb.embed_message"><code class="docutils literal notranslate"><span class="pre">embed_message()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#veil.lsb.extract_message"><code class="docutils literal notranslate"><span class="pre">extract_message()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-veil.lsb_matching">LSB Matching</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#veil.lsb_matching.embed_message"><code class="docutils literal notranslate"><span class="pre">embed_message()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#veil.lsb_matching.extract_message"><code class="docutils literal notranslate"><span class="pre">extract_message()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-veil.lsbmr">LSBMR</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#veil.lsbmr.embed_message"><code class="docutils literal notranslate"><span class="pre">embed_message()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#veil.lsbmr.extract_message"><code class="docutils literal notranslate"><span class="pre">extract_message()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-veil.pvd">PVD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#veil.pvd.embed_message"><code class="docutils literal notranslate"><span class="pre">embed_message()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#veil.pvd.extract_message"><code class="docutils literal notranslate"><span class="pre">extract_message()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-veil.alpha">Alpha-LSB</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#veil.alpha.embed_message"><code class="docutils literal notranslate"><span class="pre">embed_message()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#veil.alpha.extract_message"><code class="docutils literal notranslate"><span class="pre">extract_message()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-veil.border_lsb">Border-LSB</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#veil.border_lsb.embed_message"><code class="docutils literal notranslate"><span class="pre">embed_message()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#veil.border_lsb.extract_message"><code class="docutils literal notranslate"><span class="pre">extract_message()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-veil.dct">DCT (экспериментальный)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#veil.dct.calculate_dct_capacity"><code class="docutils literal notranslate"><span class="pre">calculate_dct_capacity()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#veil.dct.embed_message"><code class="docutils literal notranslate"><span class="pre">embed_message()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#veil.dct.extract_message"><code class="docutils literal notranslate"><span class="pre">extract_message()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Меню навигации для мобильных устройств" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Veil</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Навигация по страницам">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">API стеганографических методов</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/stego_api.rst.txt" rel="nofollow"> Просмотреть исходный код страницы</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="api">
+<h1>API стеганографических методов<a class="headerlink" href="#api" title="Link to this heading"></a></h1>
+<p>Ниже приведена автоматическая документация модулей, реализующих
+конкретные методы стеганографии. Описание берётся напрямую
+из docstring исходного кода.</p>
+<section id="module-veil.lsb">
+<span id="lsb"></span><h2>LSB<a class="headerlink" href="#module-veil.lsb" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="veil.lsb.embed_message">
+<span class="sig-prename descclassname"><span class="pre">veil.lsb.</span></span><span class="sig-name descname"><span class="pre">embed_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bytes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bits_per_channel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'RGB'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Image</span></span></span><a class="reference internal" href="_modules/veil/lsb.html#embed_message"><span class="viewcode-link"><span class="pre">[исходный</span> <span class="pre">код]</span></span></a><a class="headerlink" href="#veil.lsb.embed_message" title="Link to this definition"></a></dt>
+<dd><p>Встраивает сообщение в изображение методом базовой LSB-стеганографии.</p>
+<p>Метод LSB (Least Significant Bit) изменяет младшие биты цветовых каналов
+каждого пикселя изображения. Благодаря тому, что младшие биты вносят
+минимальный вклад в итоговый цвет, изменения визуально практически
+незаметны, что делает метод простым, но эффективным в учебных целях.</p>
+<p>Формат полезной нагрузки:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="mi">4</span> <span class="n">байта</span> <span class="n">длины</span> <span class="n">сообщения</span> <span class="n">в</span> <span class="n">big</span><span class="o">-</span><span class="n">endian</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">данные</span> <span class="n">сообщения</span><span class="p">]</span>
+</pre></div>
+</div>
+<dl class="simple">
+<dt>Алгоритм работы:</dt><dd><ol class="arabic simple">
+<li><p>Вычисляется вместимость изображения с учётом переданных параметров.</p></li>
+<li><p>Формируется блок полезной нагрузки: длина + данные.</p></li>
+<li><p>Полезная нагрузка переводится в поток бит.</p></li>
+<li><p>Биты записываются в младшие разряды выбранных каналов (R/G/B).
+Если bits_per_channel &gt; 1, то в один канал записывается несколько бит сразу.</p></li>
+<li><p>Процесс продолжается построчно по пикселям, пока все биты
+полезной нагрузки не будут встроены.</p></li>
+</ol>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Параметры<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image</strong> – Объект Pillow Image, используемый как контейнер.</p></li>
+<li><p><strong>message</strong> – Скрываемое сообщение в виде байтов.</p></li>
+<li><p><strong>bits_per_channel</strong> – Количество младших бит каждого канала,
+в которые разрешено встраивание (1–8, зависит от задачи).</p></li>
+<li><p><strong>channels</strong> – Строка из символов «R», «G», «B», определяющая,
+какие каналы используются для встраивания.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Результат<span class="colon">:</span></dt>
+<dd class="field-even"><p>Новое изображение Pillow с внедрённым сообщением.</p>
+</dd>
+<dt class="field-odd">Исключение<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>CapacityError</strong> – Если сообщение (включая длину) не помещается
+    в доступные биты изображения.</p></li>
+<li><p><strong>ValueError</strong> – Если передан неподдерживаемый канал.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="veil.lsb.extract_message">
+<span class="sig-prename descclassname"><span class="pre">veil.lsb.</span></span><span class="sig-name descname"><span class="pre">extract_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bits_per_channel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'RGB'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bytes</span></span></span><a class="reference internal" href="_modules/veil/lsb.html#extract_message"><span class="viewcode-link"><span class="pre">[исходный</span> <span class="pre">код]</span></span></a><a class="headerlink" href="#veil.lsb.extract_message" title="Link to this definition"></a></dt>
+<dd><p>Извлекает сообщение, встроенное методом LSB-стеганографии.</p>
+<p>Ожидается тот же формат полезной нагрузки, который формирует embed_message:</p>
+<blockquote>
+<div><p>[4 байта длины сообщения] + [сообщение]</p>
+</div></blockquote>
+<dl class="simple">
+<dt>Алгоритм работы:</dt><dd><ol class="arabic simple">
+<li><p>Побитово извлекаются младшие биты выбранных цветовых каналов.</p></li>
+<li><p>Из первых 32 бит формируется длина сообщения.</p></li>
+<li><p>Далее извлекается указанное количество бит данных.</p></li>
+<li><p>Биты конвертируются обратно в байты.</p></li>
+</ol>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Параметры<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image</strong> – Изображение, содержащее скрытое сообщение.</p></li>
+<li><p><strong>bits_per_channel</strong> – Количество бит, использованных при встраивании.</p></li>
+<li><p><strong>channels</strong> – Каналы, по которым происходило встраивание.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Результат<span class="colon">:</span></dt>
+<dd class="field-even"><p>Извлечённое сообщение в виде байтов.</p>
+</dd>
+<dt class="field-odd">Исключение<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ExtractionError</strong> – Если данных недостаточно для чтения длины
+    или полного сообщения.</p></li>
+<li><p><strong>ValueError</strong> – Если указан некорректный канал.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-veil.lsb_matching">
+<span id="lsb-matching"></span><h2>LSB Matching<a class="headerlink" href="#module-veil.lsb_matching" title="Link to this heading"></a></h2>
+<p>Реализация метода LSB Matching для стеганографии в изображениях.</p>
+<p>В отличие от классического LSB, который просто принудительно устанавливает
+младший бит пикселя в нужное значение, LSB Matching изменяет значение пикселя
+на +1 или -1, если бит не совпадает. Это делает распределение значений
+более естественным и усложняет простейший статистический стегоанализ.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="veil.lsb_matching.embed_message">
+<span class="sig-prename descclassname"><span class="pre">veil.lsb_matching.</span></span><span class="sig-name descname"><span class="pre">embed_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bytes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bits_per_channel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'RGB'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Image</span></span></span><a class="reference internal" href="_modules/veil/lsb_matching.html#embed_message"><span class="viewcode-link"><span class="pre">[исходный</span> <span class="pre">код]</span></span></a><a class="headerlink" href="#veil.lsb_matching.embed_message" title="Link to this definition"></a></dt>
+<dd><p>Встраивает сообщение методом LSB Matching.</p>
+<dl class="simple">
+<dt>Метод LSB Matching работает так:</dt><dd><ul class="simple">
+<li><p>если младший бит пикселя уже совпадает с нужным битом сообщения,
+значение пикселя не изменяется;</p></li>
+<li><p>если не совпадает — значение случайно увеличивается или уменьшается
+на единицу (при этом контролируются границы 0 и 255).</p></li>
+</ul>
+</dd>
+</dl>
+<p>Такое поведение помогает избежать систематического смещения значений,
+характерного для «жёсткого» переписывания LSB, и делает статистику
+яркостей менее подозрительной.</p>
+<dl class="simple">
+<dt>Формат полезной нагрузки:</dt><dd><p>[4 байта длины сообщения в big-endian] + [байты сообщения]</p>
+</dd>
+<dt>Ограничение:</dt><dd><p>В текущей реализации допускается только bits_per_channel = 1, то есть
+изменяется только один младший бит в каждом канале.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Параметры<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image</strong> – Исходное изображение Pillow, в которое встраивается сообщение.</p></li>
+<li><p><strong>message</strong> – Сообщение для скрытия, в виде байтовой строки.</p></li>
+<li><p><strong>bits_per_channel</strong> – Количество младших бит, используемых для встраивания.
+Для LSB Matching допустимо только значение 1.</p></li>
+<li><p><strong>channels</strong> – Строка, задающая используемые цветовые каналы,
+например «R», «G», «B», «RG», «RGB».</p></li>
+</ul>
+</dd>
+<dt class="field-even">Результат<span class="colon">:</span></dt>
+<dd class="field-even"><p>Новое изображение Pillow с внедрённым сообщением.</p>
+</dd>
+<dt class="field-odd">Исключение<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ValueError</strong> – Если bits_per_channel не равен 1 или указан
+    неподдерживаемый канал.</p></li>
+<li><p><strong>CapacityError</strong> – Если сообщение не помещается в изображение при
+    заданных настройках.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="veil.lsb_matching.extract_message">
+<span class="sig-prename descclassname"><span class="pre">veil.lsb_matching.</span></span><span class="sig-name descname"><span class="pre">extract_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bits_per_channel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'RGB'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bytes</span></span></span><a class="reference internal" href="_modules/veil/lsb_matching.html#extract_message"><span class="viewcode-link"><span class="pre">[исходный</span> <span class="pre">код]</span></span></a><a class="headerlink" href="#veil.lsb_matching.extract_message" title="Link to this definition"></a></dt>
+<dd><p>Извлекает сообщение, встроенное методом LSB Matching.</p>
+<p>Извлечение происходит аналогично классическому LSB:
+считываются младшие биты выбранных каналов по всем пикселям изображения
+в том же порядке, в каком происходило встраивание.</p>
+<p>Первые 32 бита интерпретируются как длина сообщения (4 байта, big-endian),
+далее читается указанное количество байт полезной нагрузки.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Параметры<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image</strong> – Изображение с предполагаемым стего-сообщением.</p></li>
+<li><p><strong>bits_per_channel</strong> – Количество младших бит, использованных при встраивании.
+Для LSB Matching должно быть равно 1.</p></li>
+<li><p><strong>channels</strong> – Набор каналов, использовавшихся при встраивании.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Результат<span class="colon">:</span></dt>
+<dd class="field-even"><p>Извлечённое сообщение в виде байтов.</p>
+</dd>
+<dt class="field-odd">Исключение<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ValueError</strong> – Если bits_per_channel не равен 1.</p></li>
+<li><p><strong>ExtractionError</strong> – Если недостаточно бит для чтения длины или всего сообщения.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-veil.lsbmr">
+<span id="lsbmr"></span><h2>LSBMR<a class="headerlink" href="#module-veil.lsbmr" title="Link to this heading"></a></h2>
+<p>Реализация метода LSBMR (LSB Matching Revisited) для стеганографии.</p>
+<p>LSBMR — усовершенствование метода LSB Matching, использующее пары соседних
+пикселей. В одной паре кодируются два бита:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>бит0 задаётся через младший бит первого пикселя;</p></li>
+<li><p>бит1 задаётся через нечётность (parity) суммы двух пикселей.</p></li>
+</ul>
+</div></blockquote>
+<p>Такая схема снижает типичные статистические признаки простой LSB-стеганографии
+и делает скрытие информации менее заметным для детекторов на основе χ²
+и распределений LSB.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="veil.lsbmr.embed_message">
+<span class="sig-prename descclassname"><span class="pre">veil.lsbmr.</span></span><span class="sig-name descname"><span class="pre">embed_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bytes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bits_per_channel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'RGB'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Image</span></span></span><a class="reference internal" href="_modules/veil/lsbmr.html#embed_message"><span class="viewcode-link"><span class="pre">[исходный</span> <span class="pre">код]</span></span></a><a class="headerlink" href="#veil.lsbmr.embed_message" title="Link to this definition"></a></dt>
+<dd><p>Встраивает сообщение методом LSBMR (LSB Matching Revisited).</p>
+<p>Метод LSBMR работает с парами соседних пикселей (p0, p1). На один канал
+пары кодируется сразу два бита полезной нагрузки:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>первый бит (bit0) задаётся через младший бит p0;</p></li>
+<li><p>второй бит (bit1) задаётся через (p0 + p1) % 2.</p></li>
+</ul>
+</div></blockquote>
+<p>Если младший бит p0 не совпадает с bit0, пиксель p0 изменяется на ±1
+(при соблюдении диапазона 0–255). Если нечётность суммы (p0 + p1)
+не совпадает с bit1, аналогично корректируется p1.</p>
+<p>Такой подход уменьшает характерные следы классического LSB и LSB Matching.</p>
+<dl class="simple">
+<dt>Формат полезной нагрузки:</dt><dd><p>[4 байта длины сообщения в big-endian] + [байты сообщения]</p>
+</dd>
+<dt>Ограничение:</dt><dd><p>bits_per_channel должен быть равен 1, поскольку схема основана
+на использовании единичных младших битов.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Параметры<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image</strong> – Исходное изображение Pillow.</p></li>
+<li><p><strong>message</strong> – Встраиваемые данные (bytes).</p></li>
+<li><p><strong>bits_per_channel</strong> – Количество используемых младших бит. Для LSBMR — только 1.</p></li>
+<li><p><strong>channels</strong> – Используемые каналы, например «R», «G», «B» или «RGB».</p></li>
+</ul>
+</dd>
+<dt class="field-even">Результат<span class="colon">:</span></dt>
+<dd class="field-even"><p>Изображение с внедрённым сообщением.</p>
+</dd>
+<dt class="field-odd">Исключение<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ValueError</strong> – Если bits_per_channel != 1 или канал некорректный.</p></li>
+<li><p><strong>CapacityError</strong> – Если сообщение не помещается в изображение при
+    заданных настройках.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="veil.lsbmr.extract_message">
+<span class="sig-prename descclassname"><span class="pre">veil.lsbmr.</span></span><span class="sig-name descname"><span class="pre">extract_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bits_per_channel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'RGB'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bytes</span></span></span><a class="reference internal" href="_modules/veil/lsbmr.html#extract_message"><span class="viewcode-link"><span class="pre">[исходный</span> <span class="pre">код]</span></span></a><a class="headerlink" href="#veil.lsbmr.extract_message" title="Link to this definition"></a></dt>
+<dd><p>Извлекает сообщение, встроенное методом LSBMR.</p>
+<p>Сообщение декодируется парами пикселей в том же порядке, что и при встраивании.
+Для каждой пары (p0, p1) извлекаются два бита:</p>
+<blockquote>
+<div><p>bit0 = LSB(p0)
+bit1 = (p0 + p1) % 2</p>
+</div></blockquote>
+<p>Далее первые 32 бита интерпретируются как длина сообщения, а затем
+извлекаются оставшиеся биты полезной нагрузки.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Параметры<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image</strong> – Изображение Pillow с внедрёнными данными.</p></li>
+<li><p><strong>bits_per_channel</strong> – Должен быть равен 1.</p></li>
+<li><p><strong>channels</strong> – Набор каналов, использованных при встраивании.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Результат<span class="colon">:</span></dt>
+<dd class="field-even"><p>Извлечённые байты сообщения.</p>
+</dd>
+<dt class="field-odd">Исключение<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ValueError</strong> – Если bits_per_channel != 1.</p></li>
+<li><p><strong>ExtractionError</strong> – Если данных недостаточно для чтения длины
+    или полного сообщения.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-veil.pvd">
+<span id="pvd"></span><h2>PVD<a class="headerlink" href="#module-veil.pvd" title="Link to this heading"></a></h2>
+<p>Реализация метода PVD (Pixel Value Differencing) для стеганографии.</p>
+<p>Метод PVD (разностная стеганография) использует разность яркостей двух
+соседних пикселей в изображении для определения количества бит, которые
+можно встроить в данную область. Чем больше локальный контраст (разность
+значений), тем большее число бит можно скрыть без заметных артефактов.</p>
+<p>Алгоритм адаптивный: изображение автоматически подбирает допустимое
+количество скрываемой информации на основе локальных характеристик.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="veil.pvd.embed_message">
+<span class="sig-prename descclassname"><span class="pre">veil.pvd.</span></span><span class="sig-name descname"><span class="pre">embed_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bytes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'R'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Image</span></span></span><a class="reference internal" href="_modules/veil/pvd.html#embed_message"><span class="viewcode-link"><span class="pre">[исходный</span> <span class="pre">код]</span></span></a><a class="headerlink" href="#veil.pvd.embed_message" title="Link to this definition"></a></dt>
+<dd><p>Встраивает сообщение методом PVD (Pixel Value Differencing).</p>
+<p>Метод работает с парами соседних пикселей: (p0, p1).
+Для каждой пары вычисляется разность d = <a href="#id1"><span class="problematic" id="id2">|p1 - p0|</span></a>, затем на основании
+величины d выбирается диапазон (lower, upper) и количество бит k, которые
+можно безопасно встроить в данную локальную область.</p>
+<dl class="simple">
+<dt>Далее:</dt><dd><ul class="simple">
+<li><p>из бит сообщения берутся k бит;</p></li>
+<li><p>эти k бит интерпретируются как число b_val;</p></li>
+<li><p>выбирается новая разность d_new в диапазоне [lower, upper] так,
+чтобы d_new % 2^k == b_val;</p></li>
+<li><p>пиксели корректируются так, чтобы их разность стала именно d_new.</p></li>
+</ul>
+</dd>
+</dl>
+<p>Такой подход делает метод визуально устойчивым, поскольку большое
+количество данных встраивается преимущественно в области с реальным
+высоким контрастом (границы, текстуры), где искажения слабо заметны.</p>
+<dl class="simple">
+<dt>Формат полезной нагрузки:</dt><dd><p>[4 байта длины в big-endian] + [байты сообщения]</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Параметры<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image</strong> – Изображение Pillow (RGB).</p></li>
+<li><p><strong>message</strong> – Данные для скрытия (bytes).</p></li>
+<li><p><strong>channels</strong> – Строка каналов («R», «G», «B» или комбинации):
+PVD применяется по каждому выбранному каналу.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Результат<span class="colon">:</span></dt>
+<dd class="field-even"><p>Новое изображение Pillow с внедрёнными данными.</p>
+</dd>
+<dt class="field-odd">Исключение<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>CapacityError</strong> – Если сообщение превышает доступную вместимость метода.</p></li>
+<li><p><strong>ValueError</strong> – Если указан неподдерживаемый канал.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="veil.pvd.extract_message">
+<span class="sig-prename descclassname"><span class="pre">veil.pvd.</span></span><span class="sig-name descname"><span class="pre">extract_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'R'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bytes</span></span></span><a class="reference internal" href="_modules/veil/pvd.html#extract_message"><span class="viewcode-link"><span class="pre">[исходный</span> <span class="pre">код]</span></span></a><a class="headerlink" href="#veil.pvd.extract_message" title="Link to this definition"></a></dt>
+<dd><p>Извлекает сообщение, встроенное методом PVD.</p>
+<dl class="simple">
+<dt>Для каждой пары пикселей (v0, v1):</dt><dd><ul class="simple">
+<li><p>вычисляется разность d = <a href="#id3"><span class="problematic" id="id4">|v1 - v0|</span></a>;</p></li>
+<li><p>определяется число бит k для данной разности;</p></li>
+<li><p>восстанавливается значение b_val = d % (2^k);</p></li>
+<li><p>эти k бит добавляются к общему потоку полезной нагрузки.</p></li>
+</ul>
+</dd>
+<dt>После накопления бит:</dt><dd><ul class="simple">
+<li><p>первые 32 бита интерпретируются как длина сообщения;</p></li>
+<li><p>затем извлекаются оставшиеся биты данных.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Параметры<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image</strong> – Изображение с предполагаемыми встроенными данными.</p></li>
+<li><p><strong>channels</strong> – Каналы, по которым происходило встраивание.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Результат<span class="colon">:</span></dt>
+<dd class="field-even"><p>Извлечённые данные (bytes).</p>
+</dd>
+<dt class="field-odd">Исключение<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ExtractionError</strong> – Если данных недостаточно для чтения длины или сообщения.</p></li>
+<li><p><strong>ValueError</strong> – Если канал указан неверно.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-veil.alpha">
+<span id="alpha-lsb"></span><h2>Alpha-LSB<a class="headerlink" href="#module-veil.alpha" title="Link to this heading"></a></h2>
+<p>Стеганография в альфа-канале изображения.</p>
+<p>Метод использует прозрачность (A-канал) для встраивания данных в формате LSB.
+Так как альфа-канал обычно слабо влияет на визуальное восприятие изображения,
+встраивание даже нескольких младших бит в каждый пиксель остаётся малозаметным.</p>
+<p>Поддерживается от 1 до 8 младших бит на канал, что даёт высокую вместимость
+и делает метод удобным для учебных демонстраций и переноса больших сообщений.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="veil.alpha.embed_message">
+<span class="sig-prename descclassname"><span class="pre">veil.alpha.</span></span><span class="sig-name descname"><span class="pre">embed_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bytes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bits_per_channel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Image</span></span></span><a class="reference internal" href="_modules/veil/alpha.html#embed_message"><span class="viewcode-link"><span class="pre">[исходный</span> <span class="pre">код]</span></span></a><a class="headerlink" href="#veil.alpha.embed_message" title="Link to this definition"></a></dt>
+<dd><p>Встраивает сообщение в альфа-канал изображения.</p>
+<p>Метод использует технику LSB (Least Significant Bits) для скрытия данных
+в прозрачности (A-канале). Количество используемых младших бит регулируется
+параметром bits_per_channel (диапазон 1–8).</p>
+<dl class="simple">
+<dt>Формат полезной нагрузки::</dt><dd><p>[4 байта длины сообщения, big-endian] + [байты сообщения]</p>
+</dd>
+<dt>Алгоритм:</dt><dd><ol class="arabic simple">
+<li><p>Исходное изображение переводится в режим RGBA.</p></li>
+<li><p>Проверяется вместимость альфа-канала.</p></li>
+<li><p>Сообщение переводится в поток бит.</p></li>
+<li><p>В каждый пиксель записываются bits_per_channel младших бит.</p></li>
+</ol>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Параметры<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image</strong> – Исходное изображение (RGB или RGBA).</p></li>
+<li><p><strong>message</strong> – Скрываемые данные в виде байтов.</p></li>
+<li><p><strong>bits_per_channel</strong> – Количество младших бит для встраивания (1..8).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Результат<span class="colon">:</span></dt>
+<dd class="field-even"><p>Новое изображение RGBA с внедрённым сообщением.</p>
+</dd>
+<dt class="field-odd">Исключение<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ValueError</strong> – Если bits_per_channel вне диапазона [1, 8].</p></li>
+<li><p><strong>CapacityError</strong> – Если сообщение не помещается при данных настройках.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="veil.alpha.extract_message">
+<span class="sig-prename descclassname"><span class="pre">veil.alpha.</span></span><span class="sig-name descname"><span class="pre">extract_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bits_per_channel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bytes</span></span></span><a class="reference internal" href="_modules/veil/alpha.html#extract_message"><span class="viewcode-link"><span class="pre">[исходный</span> <span class="pre">код]</span></span></a><a class="headerlink" href="#veil.alpha.extract_message" title="Link to this definition"></a></dt>
+<dd><p>Извлекает сообщение, скрытое в альфа-канале.</p>
+<p>Извлечение выполняется в том же порядке и объёме бит, что и при встраивании.
+Первые 32 бита интерпретируются как длина сообщения, затем читаются данные.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Параметры<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image</strong> – Изображение (RGB или RGBA) с возможным стего-сообщением.</p></li>
+<li><p><strong>bits_per_channel</strong> – Количество бит, использованное при встраивании (1..8).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Результат<span class="colon">:</span></dt>
+<dd class="field-even"><p>Извлечённое сообщение в виде bytes.</p>
+</dd>
+<dt class="field-odd">Исключение<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ValueError</strong> – Если bits_per_channel вне диапазона 1..8.</p></li>
+<li><p><strong>ExtractionError</strong> – Если данных недостаточно для корректного извлечения.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-veil.border_lsb">
+<span id="border-lsb"></span><h2>Border-LSB<a class="headerlink" href="#module-veil.border_lsb" title="Link to this heading"></a></h2>
+<p>Стеганография, выполняемая только по границе изображения.</p>
+<p>Метод Border-LSB использует только граничные (бордерные) пиксели изображения
+для скрытия данных. Это снижает визуальную заметность изменений, поскольку
+большинство изображений имеют более выраженные края.</p>
+<p>Используются выбранные цветовые каналы (R, G, B); в каждый канал можно
+встраивать от 1 до нескольких младших бит.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="veil.border_lsb.embed_message">
+<span class="sig-prename descclassname"><span class="pre">veil.border_lsb.</span></span><span class="sig-name descname"><span class="pre">embed_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bytes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bits_per_channel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'RGB'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Image</span></span></span><a class="reference internal" href="_modules/veil/border_lsb.html#embed_message"><span class="viewcode-link"><span class="pre">[исходный</span> <span class="pre">код]</span></span></a><a class="headerlink" href="#veil.border_lsb.embed_message" title="Link to this definition"></a></dt>
+<dd><p>Встраивает сообщение в граничные пиксели изображения.</p>
+<p>Метод работает полностью по LSB (младшим битам), но только по
+пикселям на бордере. Это даёт:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>более низкую заметность искажений;</p></li>
+<li><p>предсказуемое ограниченное пространство для встраивания;</p></li>
+<li><p>простоту реализации.</p></li>
+</ul>
+</div></blockquote>
+<dl class="simple">
+<dt>Формат полезной нагрузки::</dt><dd><p>[4 байта длины сообщения, big-endian] + [байты сообщения]</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Параметры<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image</strong> – Исходное изображение (будет конвертировано в RGB).</p></li>
+<li><p><strong>message</strong> – Данные для встраивания.</p></li>
+<li><p><strong>bits_per_channel</strong> – Количество младших бит на каждый выбранный канал.</p></li>
+<li><p><strong>channels</strong> – Набор каналов, например «R», «G», «B» или «RGB».</p></li>
+</ul>
+</dd>
+<dt class="field-even">Результат<span class="colon">:</span></dt>
+<dd class="field-even"><p>Новое изображение RGB с внедрённым сообщением.</p>
+</dd>
+<dt class="field-odd">Исключение<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ValueError</strong> – Если bits_per_channel &lt; 1.</p></li>
+<li><p><strong>CapacityError</strong> – Если сообщение не помещается в бордер изображения.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="veil.border_lsb.extract_message">
+<span class="sig-prename descclassname"><span class="pre">veil.border_lsb.</span></span><span class="sig-name descname"><span class="pre">extract_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bits_per_channel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'RGB'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bytes</span></span></span><a class="reference internal" href="_modules/veil/border_lsb.html#extract_message"><span class="viewcode-link"><span class="pre">[исходный</span> <span class="pre">код]</span></span></a><a class="headerlink" href="#veil.border_lsb.extract_message" title="Link to this definition"></a></dt>
+<dd><p>Извлекает сообщение, спрятанное на границе изображения.</p>
+<p>Извлечение выполняется точно в том же порядке обхода граничных пикселей,
+что и встраивание.</p>
+<p>Первые 32 бита трактуются как длина сообщения. Затем извлекаются биты
+полезной нагрузки.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Параметры<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image</strong> – Изображение с возможным стего-сообщением.</p></li>
+<li><p><strong>bits_per_channel</strong> – Количество бит, использованных при встраивании.</p></li>
+<li><p><strong>channels</strong> – Те же каналы, что использовались при создании стегоизображения.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Результат<span class="colon">:</span></dt>
+<dd class="field-even"><p>Извлечённые байты сообщения.</p>
+</dd>
+<dt class="field-odd">Исключение<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ValueError</strong> – Если bits_per_channel &lt; 1.</p></li>
+<li><p><strong>ExtractionError</strong> – Если невозможно корректно считать длину или полное сообщение.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-veil.dct">
+<span id="dct"></span><h2>DCT (экспериментальный)<a class="headerlink" href="#module-veil.dct" title="Link to this heading"></a></h2>
+<p>Экспериментальный метод частотной стеганографии на основе DCT (дискретного
+косинусного преобразования), по аналогии с JPEG.</p>
+<dl class="simple">
+<dt>Основная идея:</dt><dd><ol class="arabic simple">
+<li><p>Изображение преобразуется в пространство YCbCr.</p></li>
+<li><p>Стеганография выполняется в яркостном канале (Y), т.к. он наиболее
+устойчив к искажениям и важен для зрительного восприятия.</p></li>
+<li><p>Изображение разбивается на блоки 8×8.</p></li>
+<li><p>Для каждого блока вычисляется DCT.</p></li>
+<li><p>Несколько AC-коэффициентов заменяются на их значения с изменённым LSB.</p></li>
+<li><p>Выполняется обратное DCT → сборка изображения → преобразование в RGB.</p></li>
+</ol>
+</dd>
+</dl>
+<p>Метод нестабилен из-за ошибок округления и применения float в DCT/IDCT.
+Используется только как экспериментальная демонстрация частотной стеганографии.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="veil.dct.calculate_dct_capacity">
+<span class="sig-prename descclassname"><span class="pre">veil.dct.</span></span><span class="sig-name descname"><span class="pre">calculate_dct_capacity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Image</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="reference internal" href="_modules/veil/dct.html#calculate_dct_capacity"><span class="viewcode-link"><span class="pre">[исходный</span> <span class="pre">код]</span></span></a><a class="headerlink" href="#veil.dct.calculate_dct_capacity" title="Link to this definition"></a></dt>
+<dd><p>Вычисляет вместимость частотного контейнера в байтах.</p>
+<p>Каждому блоку 8×8 соответствует len(CANDIDATE_POSITIONS) бит полезных данных.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="veil.dct.embed_message">
+<span class="sig-prename descclassname"><span class="pre">veil.dct.</span></span><span class="sig-name descname"><span class="pre">embed_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bytes</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Image</span></span></span><a class="reference internal" href="_modules/veil/dct.html#embed_message"><span class="viewcode-link"><span class="pre">[исходный</span> <span class="pre">код]</span></span></a><a class="headerlink" href="#veil.dct.embed_message" title="Link to this definition"></a></dt>
+<dd><p>Встраивает сообщение методом DCT-LSB в яркостный канал изображения.</p>
+<dl class="simple">
+<dt>Метод:</dt><dd><ul class="simple">
+<li><p>изображение переводится в YCbCr;</p></li>
+<li><p>яркостный канал (Y) разбивается на блоки 8×8;</p></li>
+<li><p>в несколько AC-коэффициентов каждого блока встраивается по 1 биту;</p></li>
+<li><p>выполняется обратное DCT и сборка изображения.</p></li>
+</ul>
+</dd>
+</dl>
+<p>Встраивается «тройной заголовок» (length * 3), чтобы повысить шанс
+корректного восстановления длины при погрешностях float.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Параметры<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image</strong> – Изображение RGB.</p></li>
+<li><p><strong>message</strong> – Байты сообщения.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Результат<span class="colon">:</span></dt>
+<dd class="field-even"><p>Изображение RGB со встроенными данными.</p>
+</dd>
+<dt class="field-odd">Исключение<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>CapacityError</strong> – Если данные не помещаются в изображение.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="veil.dct.extract_message">
+<span class="sig-prename descclassname"><span class="pre">veil.dct.</span></span><span class="sig-name descname"><span class="pre">extract_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Image</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bytes</span></span></span><a class="reference internal" href="_modules/veil/dct.html#extract_message"><span class="viewcode-link"><span class="pre">[исходный</span> <span class="pre">код]</span></span></a><a class="headerlink" href="#veil.dct.extract_message" title="Link to this definition"></a></dt>
+<dd><p>Извлекает сообщение, встроенное методом DCT-LSB.</p>
+<dl class="simple">
+<dt>Возврат длины:</dt><dd><p>Встраивается три заголовка подряд, поэтому при извлечении
+вычисляются три разных значения длины (h1, h2, h3).
+Если хотя бы два совпадают — принимаем это значение.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Параметры<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>image</strong> – Стего-изображение RGB.</p>
+</dd>
+<dt class="field-even">Результат<span class="colon">:</span></dt>
+<dd class="field-even"><p>Извлечённое сообщение.</p>
+</dd>
+<dt class="field-odd">Исключение<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ExtractionError</strong> – Если не удаётся корректно извлечь длину
+    или полезные данные.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Нижняя область">
+        <a href="stego_methods.html" class="btn btn-neutral float-left" title="Методы стеганографии" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Предыдущая</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Авторские права 2025. </p>
+  </div>
+
+  Собрано при помощи <a href="https://www.sphinx-doc.org/">Sphinx</a> с использованием
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">темы,</a>
+    предоставленной <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

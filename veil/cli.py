@@ -1,3 +1,29 @@
+"""
+Командный интерфейс (CLI) для стеганографического инструмента Veil.
+
+CLI предоставляет три основные группы команд:
+
+1) veil embed   — встроить сообщение в изображение.
+2) veil extract — извлечь сообщение из изображения.
+3) veil analyze — выполнить базовый стегоанализ (статистика LSB, LSB-плоскости).
+
+Каждый метод стеганографии (LSB, LSB Matching, LSBMR, PVD, Alpha, Border-LSB, DCT)
+описан в виде адаптера MethodAdapter. Это позволяет единообразно вызывать
+embed_message() и extract_message() независимо от того, какой конкретный
+алгоритм выбран пользователем.
+
+CLI поддерживает:
+    • выбор метода стеганографии;
+    • встраивание текста или бинарных файлов;
+    • чтение сообщения из stdin;
+    • вывод извлечённого сообщения в stdout или в файл;
+    • выбор каналов (если метод поддерживает);
+    • регулировку числа используемых младших бит (если метод поддерживает);
+    • простые инструменты стегоанализа.
+
+Файл является ключевой точкой входа при вызове "python -m veil".
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -14,18 +40,26 @@ from veil.analysis.lsb_plane_image import lsb_plane_image
 from veil.analysis.lsb_statistics import lsb_statistics
 
 
-# ---- РЕГИСТР МЕТОДОВ ---------------------------------------------------------
+# ============================================================================
+#  Адаптер методов
+# ============================================================================
 
 
 class MethodAdapter:
     """Адаптер для разных модулей стеганографии.
 
-    Предполагаем, что у всех есть функции:
-      - embed_message(image, message, **kwargs) -> Image.Image
-      - extract_message(image, **kwargs) -> bytes
+    Все методы стеганографии должны предоставлять две функции:
+        embed_message(image, message, **kwargs) -> Image.Image
+        extract_message(image, **kwargs) -> bytes
 
-    Если в каком-то модуле у тебя другие имена (например, extract вместо
-    extract_message), здесь можно легко подправить.
+    Параметры:
+        name: Имя метода (используется в CLI).
+        embed_func: Функция встраивания.
+        extract_func: Функция извлечения.
+        supports_bits_per_channel: Может ли метод управлять числом младших бит.
+        supports_channels: Поддерживает ли метод выбор каналов.
+
+    Это позволяет добавлять новые методы в проект без изменения логики CLI.
     """
 
     def __init__(
@@ -42,6 +76,10 @@ class MethodAdapter:
         self.supports_bits_per_channel = supports_bits_per_channel
         self.supports_channels = supports_channels
 
+
+# ============================================================================
+#  Регистрация методов
+# ============================================================================
 
 METHODS: Dict[str, MethodAdapter] = {
     "lsb": MethodAdapter(
@@ -65,7 +103,7 @@ METHODS: Dict[str, MethodAdapter] = {
         "pvd",
         embed_func=pvd.embed_message,
         extract_func=pvd.extract_message,
-        supports_bits_per_channel=False,  # у нас pvd фиксированный (k зависит от диапазона)
+        supports_bits_per_channel=False,
         supports_channels=True,
     ),
     "alpha": MethodAdapter(
@@ -73,7 +111,7 @@ METHODS: Dict[str, MethodAdapter] = {
         embed_func=alpha.embed_message,
         extract_func=alpha.extract_message,
         supports_bits_per_channel=True,
-        supports_channels=False,  # работаем только по альфа-каналу
+        supports_channels=False,
     ),
     "border-lsb": MethodAdapter(
         "border-lsb",
@@ -92,11 +130,22 @@ METHODS: Dict[str, MethodAdapter] = {
 }
 
 
-# ---- УТИЛИТЫ ДЛЯ ВХОД/ВЫХОД ДАННЫХ -------------------------------------------
+# ============================================================================
+#  Вспомогательные функции для чтения/записи сообщений
+# ============================================================================
 
 
 def _read_message_from_args(args: argparse.Namespace) -> bytes:
-    """Получить message из --message / --message-file / stdin."""
+    """Возвращает сообщение для внедрения (bytes).
+
+    Источники в порядке приоритета:
+        1) --message      — текст UTF-8;
+        2) --message-file — произвольный бинарный файл;
+        3) stdin          — поток ввода, если оба предыдущих аргумента отсутствуют.
+
+    Raises:
+        ValueError: Если stdin пуст и сообщение не предоставлено.
+    """
     if args.message is not None:
         return args.message.encode("utf-8")
 
@@ -104,38 +153,56 @@ def _read_message_from_args(args: argparse.Namespace) -> bytes:
         path = Path(args.message_file)
         return path.read_bytes()
 
-    # если ничего не указано — читаем из stdin
     data = sys.stdin.buffer.read()
     if not data:
-        raise ValueError("No message provided (empty stdin)")
+        raise ValueError("No message provided (stdin is empty)")
+
     return data
 
 
 def _write_message_to_output(data: bytes, args: argparse.Namespace) -> None:
-    """Записать извлечённое сообщение в файл или stdout."""
+    """Записывает извлечённое сообщение в файл или выводит его в stdout.
+
+    Если декодирование в UTF-8 невозможно, данные выводятся в виде hex-последовательности.
+    """
     if args.out is None:
-        # Пытаемся напечатать как utf-8; если не получается — hex
         try:
-            text = data.decode("utf-8")
-            print(text)
+            print(data.decode("utf-8"))
         except UnicodeDecodeError:
             print(data.hex())
     else:
         Path(args.out).write_bytes(data)
 
 
-# ---- КОМАНДА EMBED -----------------------------------------------------------
+# ============================================================================
+#  Команда EMBED
+# ============================================================================
 
 
 def cmd_embed(args: argparse.Namespace) -> int:
+    """Команда CLI: встраивание сообщения в изображение.
+
+    Логика:
+        • загрузить исходное изображение;
+        • получить полезную нагрузку;
+        • вызвать embed_message() выбранного метода;
+        • сохранить стегоизображение.
+
+    CLI корректно обрабатывает исключения CapacityError и любые другие ошибки.
+
+    Returns:
+        Код завершения процесса:
+            0 — успех;
+            1 — ошибка.
+    """
     method_name = args.method
     if method_name not in METHODS:
         print(f"Unknown method: {method_name}", file=sys.stderr)
         return 1
 
     adapter = METHODS[method_name]
-
     image_path = Path(args.input)
+
     if not image_path.exists():
         print(f"Input image not found: {image_path}", file=sys.stderr)
         return 1
@@ -164,24 +231,39 @@ def cmd_embed(args: argparse.Namespace) -> int:
         return 1
 
     out_path = Path(args.out)
-    # сохраняем в том формате, который ожидается по расширению
     stego.save(out_path)
     print(f"Message embedded using {method_name}, saved to {out_path}")
     return 0
 
 
-# ---- КОМАНДА EXTRACT --------------------------------------------------------
+# ============================================================================
+#  Команда EXTRACT
+# ============================================================================
 
 
 def cmd_extract(args: argparse.Namespace) -> int:
+    """Команда CLI: извлечение сообщения из изображения.
+
+    Вызов цепочки:
+        • загрузка изображения,
+        • вызов extract_message() выбранного метода,
+        • вывод результата в stdout или файл.
+
+    CLI корректно обрабатывает:
+        • ExtractionError — ошибки формата стего-сообщения;
+        • любые другие исключения.
+
+    Returns:
+        Код завершения: 0 — успех, 1 — ошибка.
+    """
     method_name = args.method
     if method_name not in METHODS:
         print(f"Unknown method: {method_name}", file=sys.stderr)
         return 1
 
     adapter = METHODS[method_name]
-
     image_path = Path(args.input)
+
     if not image_path.exists():
         print(f"Input image not found: {image_path}", file=sys.stderr)
         return 1
@@ -207,18 +289,33 @@ def cmd_extract(args: argparse.Namespace) -> int:
     return 0
 
 
-# ---- КОМАНДА ANALYZE --------------------------------------------------------
+# ============================================================================
+#  Команда ANALYZE
+# ============================================================================
 
 
 def cmd_analyze(args: argparse.Namespace) -> int:
+    """Команда CLI: базовый стегоанализ.
+
+    Поддерживаются:
+        • вывод статистики LSB по каналам (--lsb-stats);
+        • построение LSB-плоскости (--lsb-plane-out).
+
+    Если пользователь не указал ни одного из двух параметров, команда сообщает
+    об отсутствии действий.
+
+    Returns:
+        Код завершения.
+    """
     image_path = Path(args.input)
+
     if not image_path.exists():
         print(f"Input image not found: {image_path}", file=sys.stderr)
         return 1
 
     image = Image.open(image_path)
 
-    # LSB статистика
+    # статистика LSB
     if args.lsb_stats:
         stats = lsb_statistics(image, channels=args.channels)
         print("LSB statistics:")
@@ -228,7 +325,7 @@ def cmd_analyze(args: argparse.Namespace) -> int:
                 f"p0={st['p0']:.3f}, p1={st['p1']:.3f}, chi2={st['chi2']:.3f}"
             )
 
-    # LSB плоскость
+    # LSB-плоскость
     if args.lsb_plane_out is not None:
         plane = lsb_plane_image(image, channel=args.channel)
         out_path = Path(args.lsb_plane_out)
@@ -242,18 +339,30 @@ def cmd_analyze(args: argparse.Namespace) -> int:
     return 0
 
 
-# ---- ПАРСЕР АРГУМЕНТОВ ------------------------------------------------------
+# ============================================================================
+#  Построение аргумент-парсера
+# ============================================================================
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Создаёт объект ArgumentParser с полной структурой команд Veil.
+
+    Команды:
+        * embed   — скрытие сообщения;
+        * extract — извлечение сообщения;
+        * analyze — инструменты стегоанализа.
+
+    Возвращает:
+        Готовый к работе ArgumentParser.
+    """
     parser = argparse.ArgumentParser(
         prog="veil",
-        description="Veil: steganography toolkit (educational project).",
+        description="Veil: универсальный учебный инструмент стеганографии.",
     )
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    # embed
+    # ------------------------- EMBED -------------------------
     p_embed = subparsers.add_parser("embed", help="Embed a message into an image")
     p_embed.add_argument("--method", "-m", required=True, choices=sorted(METHODS.keys()))
     p_embed.add_argument("--input", "-i", required=True, help="Input image path")
@@ -262,70 +371,37 @@ def build_parser() -> argparse.ArgumentParser:
     msg_group = p_embed.add_mutually_exclusive_group()
     msg_group.add_argument("--message", help="Message text (UTF-8)")
     msg_group.add_argument("--message-file", help="Path to file with raw bytes to embed")
-    # если оба не указаны — читаем из stdin
+    # если ничего не указано — читаем из stdin
 
-    p_embed.add_argument(
-        "--bits-per-channel",
-        type=int,
-        help="Bits per channel (depends on method)",
-    )
-    p_embed.add_argument(
-        "--channels",
-        help='Channels to use, e.g. "R", "RG", "RGB" (depends on method)',
-    )
+    p_embed.add_argument("--bits-per-channel", type=int)
+    p_embed.add_argument("--channels", help='Channels, e.g. "R", "RG", "RGB"')
     p_embed.set_defaults(func=cmd_embed)
 
-    # extract
+    # ------------------------- EXTRACT -------------------------
     p_extract = subparsers.add_parser("extract", help="Extract a message from an image")
     p_extract.add_argument("--method", "-m", required=True, choices=sorted(METHODS.keys()))
-    p_extract.add_argument("--input", "-i", required=True, help="Input stego image path")
-    p_extract.add_argument(
-        "--out",
-        "-o",
-        help="Output file for extracted data (if omitted, prints to stdout)",
-    )
-    p_extract.add_argument(
-        "--bits-per-channel",
-        type=int,
-        help="Bits per channel (must match embed settings)",
-    )
-    p_extract.add_argument(
-        "--channels",
-        help="Channels used during embedding (must match embed settings)",
-    )
+    p_extract.add_argument("--input", "-i", required=True)
+    p_extract.add_argument("--out", "-o", help="Output file (optional)")
+    p_extract.add_argument("--bits-per-channel", type=int)
+    p_extract.add_argument("--channels")
     p_extract.set_defaults(func=cmd_extract)
 
-    # analyze
+    # ------------------------- ANALYZE -------------------------
     p_analyze = subparsers.add_parser(
-        "analyze",
-        help="Run simple steganalysis (LSB statistics, LSB-plane).",
+        "analyze", help="Run simple steganalysis (LSB statistics, LSB-plane)."
     )
-    p_analyze.add_argument("--input", "-i", required=True, help="Input image path")
-    p_analyze.add_argument(
-        "--lsb-stats",
-        action="store_true",
-        help="Print LSB statistics for given channels",
-    )
-    p_analyze.add_argument(
-        "--channels",
-        default="RGB",
-        help='Channels for LSB statistics, e.g. "R", "RG", "RGB". Default: RGB',
-    )
-    p_analyze.add_argument(
-        "--lsb-plane-out",
-        help="If set, save LSB plane image for given channel to this path",
-    )
-    p_analyze.add_argument(
-        "--channel",
-        default="R",
-        help='Channel for LSB-plane image ("R", "G", or "B"), default: R',
-    )
+    p_analyze.add_argument("--input", "-i", required=True)
+    p_analyze.add_argument("--lsb-stats", action="store_true")
+    p_analyze.add_argument("--channels", default="RGB")
+    p_analyze.add_argument("--lsb-plane-out")
+    p_analyze.add_argument("--channel", default="R")
     p_analyze.set_defaults(func=cmd_analyze)
 
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Точка входа в приложение командной строки Veil."""
     parser = build_parser()
     args = parser.parse_args(argv)
     return args.func(args)

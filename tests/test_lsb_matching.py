@@ -1,7 +1,6 @@
 import pytest
 from PIL import Image
-
-from veil.lsb_matching import embed_message, extract
+from veil.lsb_matching import embed_message, extract_message
 from core.utils import calculate_capacity
 from core.exceptions import CapacityError
 
@@ -17,7 +16,7 @@ def test_lsb_matching_roundtrip_simple():
         channels="RGB",
     )
 
-    extracted = extract(
+    extracted = extract_message(
         image=stego,
         bits_per_channel=1,
         channels="RGB",
@@ -38,7 +37,7 @@ def test_lsb_matching_roundtrip_different_channels(channels):
         channels=channels,
     )
 
-    extracted = extract(
+    extracted = extract_message(
         image=stego,
         bits_per_channel=1,
         channels=channels,
@@ -59,4 +58,17 @@ def test_lsb_matching_raises_capacity_error_on_too_large_message():
             message=too_large_message,
             bits_per_channel=1,
             channels="RGB",
+        )
+
+
+def test_lsb_matching__embed_raises_on_unsupported_channels():
+    image = Image.new("RGB", (60, 60), color="white")
+    message = "Привет, Veil!".encode("utf-8")
+
+    with pytest.raises(ValueError):
+        embed_message(
+            image,
+            message=message,
+            bits_per_channel=1,
+            channels="CMYK",
         )

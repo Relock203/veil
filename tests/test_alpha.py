@@ -10,7 +10,6 @@ from core.exceptions import CapacityError, ExtractionError
 
 
 def make_test_image(mode="RGBA", size=(32, 32), color=(10, 20, 30, 255)):
-    """Create a simple uniform image for testing."""
     return Image.new(mode, size, color)
 
 
@@ -51,7 +50,6 @@ def test_alpha_extract_from_image_without_message():
 
 
 def test_alpha_works_on_rgb_image():
-    """Alpha stego must work even if the source image is RGB."""
     img = make_test_image(mode="RGB", size=(32, 32), color=(50, 100, 150))
     message = b"rgb alpha test"
 

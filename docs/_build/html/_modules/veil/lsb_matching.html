@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="ru" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>veil.lsb_matching &mdash; документация Veil 1.0.0</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=5f6e15f3" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=e35015f7"></script>
+        <script src="../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../../_static/translations.js?v=29b1f277"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Алфавитный указатель" href="../../genindex.html" />
+    <link rel="search" title="Поиск" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Veil
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Поиск в документации" aria-label="Поиск в документации" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Меню навигации">
+              <p class="caption" role="heading"><span class="caption-text">Основные разделы</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Введение</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Использование Veil</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../stego_methods.html">Методы стеганографии</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../stego_api.html">API стеганографических методов</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Меню навигации для мобильных устройств" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Veil</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Навигация по страницам">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Код модуля</a></li>
+      <li class="breadcrumb-item active">veil.lsb_matching</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Исходный код veil.lsb_matching</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Реализация метода LSB Matching для стеганографии в изображениях.</span>
+
+<span class="sd">В отличие от классического LSB, который просто принудительно устанавливает</span>
+<span class="sd">младший бит пикселя в нужное значение, LSB Matching изменяет значение пикселя</span>
+<span class="sd">на +1 или -1, если бит не совпадает. Это делает распределение значений</span>
+<span class="sd">более естественным и усложняет простейший статистический стегоанализ.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">random</span><span class="w"> </span><span class="kn">import</span> <span class="n">choice</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">core.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">CapacityError</span><span class="p">,</span> <span class="n">ExtractionError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">core.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">bytes_to_bits</span><span class="p">,</span> <span class="n">bits_to_bytes</span><span class="p">,</span> <span class="n">calculate_capacity</span>
+
+
+<div class="viewcode-block" id="embed_message">
+<a class="viewcode-back" href="../../stego_api.html#veil.lsb_matching.embed_message">[документация]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">embed_message</span><span class="p">(</span>
+        <span class="n">image</span><span class="p">:</span> <span class="n">Image</span><span class="o">.</span><span class="n">Image</span><span class="p">,</span>
+        <span class="n">message</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span>
+        <span class="n">bits_per_channel</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">channels</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;RGB&quot;</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Image</span><span class="o">.</span><span class="n">Image</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Встраивает сообщение методом LSB Matching.</span>
+
+<span class="sd">    Метод LSB Matching работает так:</span>
+<span class="sd">      * если младший бит пикселя уже совпадает с нужным битом сообщения,</span>
+<span class="sd">        значение пикселя не изменяется;</span>
+<span class="sd">      * если не совпадает — значение случайно увеличивается или уменьшается</span>
+<span class="sd">        на единицу (при этом контролируются границы 0 и 255).</span>
+
+<span class="sd">    Такое поведение помогает избежать систематического смещения значений,</span>
+<span class="sd">    характерного для «жёсткого» переписывания LSB, и делает статистику</span>
+<span class="sd">    яркостей менее подозрительной.</span>
+
+<span class="sd">    Формат полезной нагрузки:</span>
+<span class="sd">      [4 байта длины сообщения в big-endian] + [байты сообщения]</span>
+
+<span class="sd">    Ограничение:</span>
+<span class="sd">      В текущей реализации допускается только bits_per_channel = 1, то есть</span>
+<span class="sd">      изменяется только один младший бит в каждом канале.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        image: Исходное изображение Pillow, в которое встраивается сообщение.</span>
+<span class="sd">        message: Сообщение для скрытия, в виде байтовой строки.</span>
+<span class="sd">        bits_per_channel: Количество младших бит, используемых для встраивания.</span>
+<span class="sd">            Для LSB Matching допустимо только значение 1.</span>
+<span class="sd">        channels: Строка, задающая используемые цветовые каналы,</span>
+<span class="sd">            например &quot;R&quot;, &quot;G&quot;, &quot;B&quot;, &quot;RG&quot;, &quot;RGB&quot;.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Новое изображение Pillow с внедрённым сообщением.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: Если bits_per_channel не равен 1 или указан</span>
+<span class="sd">            неподдерживаемый канал.</span>
+<span class="sd">        CapacityError: Если сообщение не помещается в изображение при</span>
+<span class="sd">            заданных настройках.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">bits_per_channel</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;bits_per_channel must be 1 in this mode&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Вместимость считаем с учётом одного бита на канал.</span>
+    <span class="n">capacity</span> <span class="o">=</span> <span class="n">calculate_capacity</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">channels</span><span class="p">)</span>
+
+    <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+    <span class="n">length_bytes</span> <span class="o">=</span> <span class="n">length</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">byteorder</span><span class="o">=</span><span class="s2">&quot;big&quot;</span><span class="p">)</span>
+    <span class="n">payload</span> <span class="o">=</span> <span class="n">length_bytes</span> <span class="o">+</span> <span class="n">message</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">capacity</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">CapacityError</span><span class="p">(</span><span class="s2">&quot;Message is too large for given image and settings&quot;</span><span class="p">)</span>
+
+    <span class="n">payload_bits</span> <span class="o">=</span> <span class="n">bytes_to_bits</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+
+    <span class="n">stego</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">pixels</span> <span class="o">=</span> <span class="n">stego</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
+    <span class="n">width</span><span class="p">,</span> <span class="n">height</span> <span class="o">=</span> <span class="n">stego</span><span class="o">.</span><span class="n">size</span>
+
+    <span class="n">bit_index</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">total_bits</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">payload_bits</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">height</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">width</span><span class="p">):</span>
+            <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">pixels</span><span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">]</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">]</span>
+
+            <span class="c1"># Если все биты полезной нагрузки уже встроены — возвращаем результат.</span>
+            <span class="k">if</span> <span class="n">bit_index</span> <span class="o">&gt;=</span> <span class="n">total_bits</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">stego</span>
+
+            <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="n">channels</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">bit_index</span> <span class="o">&gt;=</span> <span class="n">total_bits</span><span class="p">:</span>
+                    <span class="k">break</span>
+
+                <span class="k">if</span> <span class="n">ch</span> <span class="o">==</span> <span class="s2">&quot;R&quot;</span><span class="p">:</span>
+                    <span class="n">idx</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">elif</span> <span class="n">ch</span> <span class="o">==</span> <span class="s2">&quot;G&quot;</span><span class="p">:</span>
+                    <span class="n">idx</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="k">elif</span> <span class="n">ch</span> <span class="o">==</span> <span class="s2">&quot;B&quot;</span><span class="p">:</span>
+                    <span class="n">idx</span> <span class="o">=</span> <span class="mi">2</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unsupported channel&quot;</span><span class="p">)</span>
+
+                <span class="n">value</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+                <span class="n">last_bit</span> <span class="o">=</span> <span class="n">value</span> <span class="o">&amp;</span> <span class="mi">1</span>
+                <span class="n">current_bit</span> <span class="o">=</span> <span class="n">payload_bits</span><span class="p">[</span><span class="n">bit_index</span><span class="p">]</span>
+
+                <span class="k">if</span> <span class="n">last_bit</span> <span class="o">!=</span> <span class="n">current_bit</span><span class="p">:</span>
+                    <span class="c1"># Меняем яркость на 1 вверх/вниз, не выходя за диапазон [0, 255].</span>
+                    <span class="k">if</span> <span class="n">value</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">value</span> <span class="o">=</span> <span class="mi">1</span>
+                    <span class="k">elif</span> <span class="n">value</span> <span class="o">==</span> <span class="mi">255</span><span class="p">:</span>
+                        <span class="n">value</span> <span class="o">=</span> <span class="mi">254</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">value</span> <span class="o">+=</span> <span class="n">choice</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">+</span><span class="mi">1</span><span class="p">])</span>
+
+                <span class="n">bit_index</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">values</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+            <span class="n">pixels</span><span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">]</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">stego</span></div>
+
+
+
+<div class="viewcode-block" id="extract_message">
+<a class="viewcode-back" href="../../stego_api.html#veil.lsb_matching.extract_message">[документация]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">extract_message</span><span class="p">(</span>
+        <span class="n">image</span><span class="p">:</span> <span class="n">Image</span><span class="o">.</span><span class="n">Image</span><span class="p">,</span>
+        <span class="n">bits_per_channel</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">channels</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;RGB&quot;</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Извлекает сообщение, встроенное методом LSB Matching.</span>
+
+<span class="sd">    Извлечение происходит аналогично классическому LSB:</span>
+<span class="sd">    считываются младшие биты выбранных каналов по всем пикселям изображения</span>
+<span class="sd">    в том же порядке, в каком происходило встраивание.</span>
+
+<span class="sd">    Первые 32 бита интерпретируются как длина сообщения (4 байта, big-endian),</span>
+<span class="sd">    далее читается указанное количество байт полезной нагрузки.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        image: Изображение с предполагаемым стего-сообщением.</span>
+<span class="sd">        bits_per_channel: Количество младших бит, использованных при встраивании.</span>
+<span class="sd">            Для LSB Matching должно быть равно 1.</span>
+<span class="sd">        channels: Набор каналов, использовавшихся при встраивании.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Извлечённое сообщение в виде байтов.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: Если bits_per_channel не равен 1.</span>
+<span class="sd">        ExtractionError: Если недостаточно бит для чтения длины или всего сообщения.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">bits_per_channel</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;bits_per_channel must be 1 in this mode&quot;</span><span class="p">)</span>
+
+    <span class="n">pixels</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
+    <span class="n">width</span><span class="p">,</span> <span class="n">height</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">size</span>
+
+    <span class="n">bits</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">height</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">width</span><span class="p">):</span>
+            <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">pixels</span><span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">]</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">]</span>
+
+            <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="n">channels</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">ch</span> <span class="o">==</span> <span class="s2">&quot;R&quot;</span><span class="p">:</span>
+                    <span class="n">idx</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">elif</span> <span class="n">ch</span> <span class="o">==</span> <span class="s2">&quot;G&quot;</span><span class="p">:</span>
+                    <span class="n">idx</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="k">elif</span> <span class="n">ch</span> <span class="o">==</span> <span class="s2">&quot;B&quot;</span><span class="p">:</span>
+                    <span class="n">idx</span> <span class="o">=</span> <span class="mi">2</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">continue</span>
+
+                <span class="n">value</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+                <span class="n">last_bit</span> <span class="o">=</span> <span class="n">value</span> <span class="o">&amp;</span> <span class="mi">1</span>
+                <span class="n">bits</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">last_bit</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bits</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">32</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ExtractionError</span><span class="p">(</span><span class="s2">&quot;Not enough data to read message length&quot;</span><span class="p">)</span>
+
+    <span class="n">length_bits</span> <span class="o">=</span> <span class="n">bits</span><span class="p">[:</span><span class="mi">32</span><span class="p">]</span>
+    <span class="n">length_bytes</span> <span class="o">=</span> <span class="n">bits_to_bytes</span><span class="p">(</span><span class="n">length_bits</span><span class="p">)</span>
+    <span class="n">length</span> <span class="o">=</span> <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">length_bytes</span><span class="p">,</span> <span class="n">byteorder</span><span class="o">=</span><span class="s2">&quot;big&quot;</span><span class="p">)</span>
+
+    <span class="n">needed_bits</span> <span class="o">=</span> <span class="n">length</span> <span class="o">*</span> <span class="mi">8</span>
+    <span class="n">total_needed</span> <span class="o">=</span> <span class="mi">32</span> <span class="o">+</span> <span class="n">needed_bits</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bits</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">total_needed</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ExtractionError</span><span class="p">(</span><span class="s2">&quot;Not enough embedded data for declared message length&quot;</span><span class="p">)</span>
+
+    <span class="n">message_bits</span> <span class="o">=</span> <span class="n">bits</span><span class="p">[</span><span class="mi">32</span><span class="p">:</span><span class="n">total_needed</span><span class="p">]</span>
+    <span class="n">message_bytes</span> <span class="o">=</span> <span class="n">bits_to_bytes</span><span class="p">(</span><span class="n">message_bits</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">message_bytes</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Авторские права 2025. </p>
+  </div>
+
+  Собрано при помощи <a href="https://www.sphinx-doc.org/">Sphinx</a> с использованием
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">темы,</a>
+    предоставленной <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

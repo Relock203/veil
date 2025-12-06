@@ -3,10 +3,8 @@ from PIL import Image
 
 from veil.lsb import (
     embed_message,
-    extract,
+    extract_message,
     calculate_capacity,
-    embed_file_to_file,
-    extract_from_file,
 )
 from core.exceptions import CapacityError
 
@@ -22,7 +20,7 @@ def test_lsb_embed_extract_roundtrip_simple():
         channels="RGB",
     )
 
-    extracted = extract(
+    extracted = extract_message(
         stego,
         bits_per_channel=1,
         channels="RGB",
@@ -51,7 +49,7 @@ def test_lsb_embed_extract_parametrized(bits_per_channel, channels):
         channels=channels,
     )
 
-    extracted = extract(
+    extracted = extract_message(
         stego,
         bits_per_channel=bits_per_channel,
         channels=channels,
@@ -75,27 +73,14 @@ def test_lsb_embed_raises_capacity_error_on_too_large_message():
         )
 
 
-def test_lsb_file_to_file_roundtrip(tmp_path):
-    image = Image.new("RGB", (64, 64), color="white")
-    input_path = tmp_path / "cover.png"
-    image.save(input_path)
+def test_lsb_embed_raises_on_unsupported_channels():
+    image = Image.new("RGB", (60, 60), color="white")
+    message = "Привет, Veil!".encode("utf-8")
 
-    message = b"file-based test message"
-
-    output_path = tmp_path / "stego.png"
-
-    embed_file_to_file(
-        input_path=input_path,
-        output_path=output_path,
-        message=message,
-        bits_per_channel=2,
-        channels="RGB",
-    )
-
-    extracted = extract_from_file(
-        input_path=output_path,
-        bits_per_channel=2,
-        channels="RGB",
-    )
-
-    assert extracted == message
+    with pytest.raises(ValueError):
+        embed_message(
+            image,
+            message=message,
+            bits_per_channel=1,
+            channels="CMYK",
+        )

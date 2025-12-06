@@ -1,17 +1,14 @@
-"""Custom exception classes for Veil."""
-
-
 class VeilError(Exception):
-    """Base class for all Veil-specific exceptions."""
+    """Базовый класс для всех исключений, специфичных для проекта Veil."""
 
 
 class CapacityError(VeilError):
-    """Raised when the message does not fit into the cover image."""
+    """Выбрасывается, если сообщение не помещается в контейнер (изображение)."""
 
 
 class UnsupportedFormatError(VeilError):
-    """Raised when the image format is not supported by Veil."""
+    """Выбрасывается, если формат изображения не поддерживается или не распознан."""
 
 
 class ExtractionError(VeilError):
-    """Raised when hidden data cannot be extracted from an image."""
+    """Выбрасывается при невозможности корректно извлечь встроенные данные."""

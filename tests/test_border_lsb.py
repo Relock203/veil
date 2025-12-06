@@ -1,6 +1,5 @@
 import pytest
 from PIL import Image
-
 from veil.border_lsb import (
     embed_message,
     extract_message,
@@ -36,7 +35,7 @@ def test_border_lsb_roundtrip_various_bits(bpc):
 
 def test_border_lsb_capacity_too_small():
     img = make_image(size=(4, 4))
-    # граница 4x4: пикселей на бордере = 4*4 - (4-2)*(4-2) = 16 - 4 = 12
+    # пикселей на границе = 4*4 - (4-2)*(4-2) = 16 - 4 = 12
     # capacity_bits = 12 * 3 * 1 = 36 -> 4 bytes
     message = b"12345"
 
@@ -46,7 +45,6 @@ def test_border_lsb_capacity_too_small():
 
 def test_border_lsb_not_enough_data_raises_extraction_error():
     img = make_image((0, 0))
-    # просто чистое изображение, без встраивания
     with pytest.raises(ExtractionError):
         extract_message(img)
 
