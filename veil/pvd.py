@@ -56,6 +56,8 @@ def embed_message(
     """
     capacity = utils.calculate_pvd_capacity(image, channels)
 
+    base = image.convert("RGB")
+
     length = len(message)
     length_bytes = length.to_bytes(4, byteorder='big')
     payload = length_bytes + message
@@ -65,7 +67,7 @@ def embed_message(
 
     payload_bits = utils.bytes_to_bits(payload)
 
-    stego = image.copy()
+    stego = base.copy()
     pixels = stego.load()
     width, height = stego.size
 
@@ -170,7 +172,8 @@ def extract_message(
         ExtractionError: Если данных недостаточно для чтения длины или сообщения.
         ValueError: Если канал указан неверно.
     """
-    pixels = image.load()
+    base = image.convert("RGB")
+    pixels = base.load()
     width, height = image.size
 
     bits: list[int] = []

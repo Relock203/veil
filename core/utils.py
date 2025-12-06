@@ -1,5 +1,6 @@
 from PIL import Image
 from typing import List, Tuple
+import math
 
 
 def bytes_to_bits(data: bytes) -> list[int]:
@@ -60,18 +61,17 @@ def get_range_info(d: int) -> tuple[int, int, int]:
 
 
 def calculate_pvd_capacity(image, channel="R"):
-    pixels = image.load()
-    width, height = image.size
+    rgb = image.convert("RGB")
+    pixels = rgb.load()
+    width, height = rgb.size
 
     capacity_bits = 0
 
     for y in range(height):
         for x in range(0, width - 1, 2):
-            # берём два соседних пикселя
             r0, g0, b0 = pixels[x, y]
             r1, g1, b1 = pixels[x+1, y]
 
-            # выбираем один канал
             if channel == "R":
                 v0, v1 = r0, r1
             elif channel == "G":
@@ -80,11 +80,11 @@ def calculate_pvd_capacity(image, channel="R"):
                 v0, v1 = b0, b1
 
             d = abs(v1 - v0)
-
             lower, upper, k = get_range_info(d)
             capacity_bits += k
 
     return capacity_bits // 8
+
 
 
 def choose_target_difference(
