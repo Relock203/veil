@@ -35,21 +35,28 @@ def calculate_capacity(image: Image.Image, bits_per_channel: int, channels: str)
     total_bits = num_pixels * bits_per_channel * num_channels
     return total_bits // 8
 
+PVD_RANGES = [
+    (0, 7),
+    (8, 15),
+    (16, 31),
+    (32, 63),
+    (64, 127),
+    (128, 255),
+]
 
-def get_range_info(d:int):
-    ranges = [
-        (0, 7, 3),
-        (8, 15, 3),
-        (16, 31, 4),
-        (32, 63, 5),
-        (64, 127, 6),
-        (128, 255, 7),
-    ]
 
-    for lower, upper, k in ranges:
+def get_range_info(d: int) -> tuple[int, int, int]:
+    for lower, upper in PVD_RANGES:
         if lower <= d <= upper:
+            width = upper - lower + 1
+            # k = floor(log2(width))
+            k = int(math.floor(math.log2(width)))
             return lower, upper, k
-    return 0, 7, 3
+
+    lower, upper = PVD_RANGES[-1]
+    width = upper - lower + 1
+    k = int(math.floor(math.log2(width)))
+    return lower, upper, k
 
 
 def calculate_pvd_capacity(image, channel="R"):

@@ -404,7 +404,37 @@ def main(argv: list[str] | None = None) -> int:
     """Точка входа в приложение командной строки Veil."""
     parser = build_parser()
     args = parser.parse_args(argv)
-    return args.func(args)
+    try:
+        if args.command == "embed":
+            return cmd_embed(args)
+        elif args.command == "extract":
+            return cmd_extract(args)
+        elif args.command == "analyze":
+            return cmd_analyze(args)
+        else:
+            parser.print_help()
+            return 1
+
+    except CapacityError as e:
+        print(f"[Ошибка вместимости] {e}", file=sys.stderr)
+        return 1
+    except ExtractionError as e:
+        print(f"[Ошибка извлечения] {e}", file=sys.stderr)
+        return 1
+    except VeilError as e:
+        # Любые другие твои кастомные ошибки
+        print(f"[Ошибка Veil] {e}", file=sys.stderr)
+        return 1
+    except FileNotFoundError as e:
+        print(f"[Файл не найден] {e}", file=sys.stderr)
+        return 1
+    except ValueError as e:
+        print(f"[Ошибка параметров] {e}", file=sys.stderr)
+        return 1
+    except Exception as e:
+        # На всякий пожарный — чтобы не вывалился traceback
+        print(f"[Неожиданная ошибка] {e}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":
